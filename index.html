@@ -235,6 +235,11 @@ table.items td:last-child{text-align:right}
 .settings-list{display:flex;flex-direction:column;gap:12px;max-width:640px}
 .muted{color:var(--muted)}
 .mt{margin-top:12px}
+.period-box{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}
+.period-box select{width:auto;min-width:180px;font-weight:600}
+.period-custom{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.period-custom input{width:150px}
+@media (max-width:560px){.period-box{align-items:stretch;width:100%}.period-box select{width:100%}.period-custom input{flex:1;width:auto}}
 /* Mobile: never scroll sideways. iPhone date fields are wider than their box unless told otherwise. */
 html,body{overflow-x:hidden;max-width:100%}
 main,.app-wrap{overflow-x:clip}
@@ -288,7 +293,12 @@ img{max-width:100%}
     <section id="view-dashboard">
       <div class="page-head">
         <div><h2>Dashboard</h2><p id="dashSub">Overview of spending on the children</p><p id="dashDate" class="muted" style="font-size:13px;margin:3px 0 0"></p></div>
-        <select id="dashPeriod" style="width:auto"></select>
+        <div class="period-box">
+          <select id="dashPeriod" aria-label="Period"></select>
+          <div class="period-custom" id="periodCustom" hidden>
+            <input type="date" id="pFrom" aria-label="From date"><span class="muted">to</span><input type="date" id="pTo" aria-label="To date">
+          </div>
+        </div>
       </div>
       <div class="viewer-note" id="viewerNote" hidden>👁️ View-only account: you can see everything, but you cannot add, change or delete.</div>
       <div id="hero"></div>
@@ -600,16 +610,46 @@ function render() {
    =================================================================== */
 function validExpenses() { return state.data.expenses.filter(function (e) { return e.dateValid; }); }
 function validTransfers() { return state.data.transfers.filter(function (t) { return t.dateValid; }); }
-function setupPeriodSelect() {
-  var years = {};
-  validExpenses().concat(validTransfers()).forEach(function (x) { years[x.date.slice(0, 4)] = 1; });
-  years[today().slice(0, 4)] = 1;
-  var ys = Object.keys(years).sort().reverse();
-  var sel = $('dashPeriod'), cur = sel.value || today().slice(0, 4);
-  sel.innerHTML = ys.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('') + '<option value="all">All time</option>';
-  sel.value = ys.indexOf(cur) >= 0 || cur === 'all' ? cur : ys[0];
+var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
+function monthStart(y, m) { while (m < 1) { m += 12; y--; } return y + '-' + pad2(m) + '-01'; }
+function niceDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? MONTHS[+m[2] - 1] + ' ' + (+m[3]) + ', ' + m[1] : iso; }
+/** Turns the picker value into { from, to, label } (label completes "Spending on the children …"). */
+function periodInfo(v) {
+  var t = today(), y = +t.slice(0, 4), mo = +t.slice(5, 7);
+  var kind = v.split(':')[0], arg = v.split(':')[1];
+  if (kind === 'y') return { from: arg + '-01-01', to: arg + '-12-31', label: 'in ' + arg };
+  if (kind === 'm') { var yy = +arg.slice(0, 4), mm = +arg.slice(5, 7); return { from: arg + '-01', to: arg + '-' + pad2(lastDay(yy, mm)), label: 'in ' + MONTH_NAMES[mm - 1] + ' ' + yy }; }
+  if (v === 'thismonth') return periodInfo('m:' + y + '-' + pad2(mo));
+  if (v === 'lastmonth') { var ly = mo === 1 ? y - 1 : y, lm = mo === 1 ? 12 : mo - 1; return periodInfo('m:' + ly + '-' + pad2(lm)); }
+  if (v === 'last3') return { from: monthStart(y, mo - 2), to: t, label: 'in the last 3 months' };
+  if (v === 'last12') return { from: monthStart(y, mo - 11), to: t, label: 'in the last 12 months' };
+  if (v === 'custom') {
+    var f = $('pFrom').value || (y + '-01-01'), to = $('pTo').value || t;
+    if (f > to) { var s = f; f = to; to = s; }
+    return { from: f, to: to, label: 'from ' + niceDate(f) + ' to ' + niceDate(to) };
+  }
+  return { from: '0000-01-01', to: '9999-12-31', label: '', all: true };
 }
-function inPeriod(x, p) { return p === 'all' || x.date.slice(0, 4) === p; }
+function setupPeriodSelect() {
+  var sel = $('dashPeriod');
+  var cur = sel.value || localPref('cet_period') || ('y:' + today().slice(0, 4));
+  var years = {}, months = {};
+  validExpenses().concat(validTransfers()).forEach(function (x) { years[x.date.slice(0, 4)] = 1; months[x.date.slice(0, 7)] = 1; });
+  years[today().slice(0, 4)] = 1; months[today().slice(0, 7)] = 1;
+  var ys = Object.keys(years).sort().reverse(), ms = Object.keys(months).sort().reverse();
+  var opt = function (v, l) { return '<option value="' + v + '">' + esc(l) + '</option>'; };
+  sel.innerHTML =
+    '<optgroup label="Quick">' + opt('thismonth', 'This month') + opt('lastmonth', 'Last month') + opt('last3', 'Last 3 months') + opt('last12', 'Last 12 months') + opt('all', 'All time') + opt('custom', 'Custom range…') + '</optgroup>' +
+    '<optgroup label="Years">' + ys.map(function (y) { return opt('y:' + y, y); }).join('') + '</optgroup>' +
+    '<optgroup label="Months">' + ms.map(function (m) { return opt('m:' + m, MONTH_NAMES[+m.slice(5) - 1] + ' ' + m.slice(0, 4)); }).join('') + '</optgroup>';
+  sel.value = cur;
+  if (sel.value !== cur) sel.value = 'y:' + today().slice(0, 4);
+  $('periodCustom').hidden = sel.value !== 'custom';
+  if (sel.value === 'custom' && !$('pFrom').value) { $('pFrom').value = today().slice(0, 4) + '-01-01'; $('pTo').value = today(); }
+}
+function inRange(x, r) { return x.date >= r.from && x.date <= r.to; }
 function bars(el, pairs, colorFn) {
   var max = Math.max.apply(null, pairs.map(function (p) { return p[1]; }).concat([1]));
   $(el).innerHTML = pairs.length ? pairs.map(function (p, i) {
@@ -623,9 +663,9 @@ function groupBy(arr, key) {
 }
 function renderDashboard() {
   setupPeriodSelect();
-  var p = $('dashPeriod').value;
-  var exp = validExpenses().filter(function (e) { return inPeriod(e, p); });
-  var trf = validTransfers().filter(function (t) { return inPeriod(t, p); });
+  var p = $('dashPeriod').value, range = periodInfo(p);
+  var exp = validExpenses().filter(function (e) { return inRange(e, range); });
+  var trf = validTransfers().filter(function (t) { return inRange(t, range); });
   var total = sum(exp);
   var me = sum(exp.filter(function (e) { return e.paidBy === 'Me'; }));
   var ex = sum(exp.filter(function (e) { return e.paidBy === 'Ex-spouse'; }));
@@ -636,14 +676,14 @@ function renderDashboard() {
   var supportPaid = sum(sent.filter(isSupport));
   var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink || e.receiptInSheet; }).length;
 
-  $('dashSub').textContent = p === 'all' ? 'All recorded spending on the children' : 'Spending on the children in ' + p;
+  $('dashSub').textContent = range.all ? 'All recorded spending on the children' : 'Spending on the children ' + range.label;
   var now = new Date(), upd = state.loadedAt || now;
   $('dashDate').textContent = '📅 ' + now.toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
     ' · Updated ' + upd.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
   var w = state.data.warnings;
   $('warnings').innerHTML = w.length ? '<div class="warn-box"><b>Please check ' + w.length + ' item' + (w.length > 1 ? 's' : '') + ' in your sheet</b><ul>' + w.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '';
 
-  $('hero').innerHTML = '<div class="hero"><div class="lbl">Total spent on the children' + (p === 'all' ? '' : ' in ' + p) + '</div><div class="big num">' + money(total) + '</div><div class="pills">' +
+  $('hero').innerHTML = '<div class="hero"><div class="lbl">Total spent on the children' + (range.all ? '' : ' ' + range.label) + '</div><div class="big num">' + money(total) + '</div><div class="pills">' +
     '<span class="pill">📅 This month ' + money(thisMonth) + '</span><span class="pill">🧾 ' + exp.length + ' expenses</span><span class="pill">📎 ' + withReceipt + ' with receipt</span></div></div>';
   var kpi = function (label, value, sub, color, icon) { return '<div class="card kpi" style="--k:' + color + '"><div class="k-ico">' + icon + '</div><div class="label">' + label + '</div><div class="value num">' + value + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
   $('kpis').innerHTML =
@@ -664,11 +704,13 @@ function renderDashboard() {
 
   // monthly
   var months = [];
-  if (p === 'all') {
+  if (range.all) {
     var keys = {}; exp.forEach(function (e) { keys[e.date.slice(0, 7)] = 1; });
     months = Object.keys(keys).sort().slice(-12);
   } else {
-    for (var i = 1; i <= 12; i++) months.push(p + '-' + (i < 10 ? '0' : '') + i);
+    var cy = +range.from.slice(0, 4), cm = +range.from.slice(5, 7), endKey = range.to.slice(0, 7);
+    while ((cy + '-' + pad2(cm)) <= endKey && months.length < 24) { months.push(cy + '-' + pad2(cm)); cm++; if (cm > 12) { cm = 1; cy++; } }
+    months = months.slice(-12);
   }
   var mv = months.map(function (k) { return sum(exp.filter(function (e) { return e.date.slice(0, 7) === k; })); });
   var mmax = Math.max.apply(null, mv.concat([1]));
@@ -1184,7 +1226,8 @@ $('sImport').addEventListener('click', function () {
   }).catch(function (e) { toast(e.message, true); })
     .then(function () { b.disabled = false; b.textContent = 'Copy receipt images from the sheet now'; });
 });
-$('dashPeriod').addEventListener('change', renderDashboard);
+$('dashPeriod').addEventListener('change', function () { localPref('cet_period', this.value); renderDashboard(); });
+['pFrom', 'pTo'].forEach(function (id) { $(id).addEventListener('change', renderDashboard); });
 
 /* ===================================================================
    Start
