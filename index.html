@@ -154,7 +154,8 @@ main{max-width:1100px;margin:0 auto;padding:22px 16px 110px}
 @media (max-width:760px){.fab{bottom:86px;right:16px}}
 
 /* Filters & list */
-.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr;gap:8px;margin-bottom:12px}
+.filters .period-custom{grid-column:1/-1;justify-content:flex-start}
 @media (max-width:900px){.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
 input[type=text],input[type=search],input[type=date],input[type=number],input[type=password],input[type=tel],select,textarea{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:9px 12px;min-height:44px}
 textarea{min-height:76px;resize:vertical}
@@ -325,8 +326,10 @@ img{max-width:100%}
         <input class="search" type="search" id="fSearch" placeholder="Search description, store, notes…" aria-label="Search">
         <select id="fChild" aria-label="Child"></select>
         <select id="fCategory" aria-label="Category"></select>
-        <input type="date" id="fFrom" aria-label="From date">
-        <input type="date" id="fTo" aria-label="To date">
+        <select id="fPeriod" aria-label="Period"></select>
+        <div class="period-custom" id="fCustom" hidden>
+          <input type="date" id="fFrom" aria-label="From date"><span class="muted">to</span><input type="date" id="fTo" aria-label="To date">
+        </div>
       </div>
       <div class="list-total"><span id="expCount"></span><span id="expSum" class="num"></span></div>
       <div class="list" id="expList"></div>
@@ -618,7 +621,7 @@ function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
 function monthStart(y, m) { while (m < 1) { m += 12; y--; } return y + '-' + pad2(m) + '-01'; }
 function niceDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? MONTHS[+m[2] - 1] + ' ' + (+m[3]) + ', ' + m[1] : iso; }
 /** Turns the picker value into { from, to, label } (label completes "Spending on the children …"). */
-function periodInfo(v) {
+function periodInfo(v, fromId, toId) {
   var t = today(), y = +t.slice(0, 4), mo = +t.slice(5, 7);
   var kind = v.split(':')[0], arg = v.split(':')[1];
   if (kind === 'y') return { from: arg + '-01-01', to: arg + '-12-31', label: 'in ' + arg };
@@ -628,15 +631,13 @@ function periodInfo(v) {
   if (v === 'last3') return { from: monthStart(y, mo - 2), to: t, label: 'in the last 3 months' };
   if (v === 'last12') return { from: monthStart(y, mo - 11), to: t, label: 'in the last 12 months' };
   if (v === 'custom') {
-    var f = $('pFrom').value || (y + '-01-01'), to = $('pTo').value || t;
+    var f = $(fromId || 'pFrom').value || (y + '-01-01'), to = $(toId || 'pTo').value || t;
     if (f > to) { var s = f; f = to; to = s; }
     return { from: f, to: to, label: 'from ' + niceDate(f) + ' to ' + niceDate(to) };
   }
   return { from: '0000-01-01', to: '9999-12-31', label: '', all: true };
 }
-function setupPeriodSelect() {
-  var sel = $('dashPeriod');
-  var cur = sel.value || localPref('cet_period') || ('y:' + today().slice(0, 4));
+function periodOptions(sel, cur, fallback) {
   var years = {}, months = {};
   validExpenses().concat(validTransfers()).forEach(function (x) { years[x.date.slice(0, 4)] = 1; months[x.date.slice(0, 7)] = 1; });
   years[today().slice(0, 4)] = 1; months[today().slice(0, 7)] = 1;
@@ -647,7 +648,11 @@ function setupPeriodSelect() {
     '<optgroup label="Years">' + ys.map(function (y) { return opt('y:' + y, y); }).join('') + '</optgroup>' +
     '<optgroup label="Months">' + ms.map(function (m) { return opt('m:' + m, MONTH_NAMES[+m.slice(5) - 1] + ' ' + m.slice(0, 4)); }).join('') + '</optgroup>';
   sel.value = cur;
-  if (sel.value !== cur) sel.value = 'y:' + today().slice(0, 4);
+  if (sel.value !== cur) sel.value = fallback;
+}
+function setupPeriodSelect() {
+  var sel = $('dashPeriod');
+  periodOptions(sel, sel.value || localPref('cet_period') || ('y:' + today().slice(0, 4)), 'y:' + today().slice(0, 4));
   $('periodCustom').hidden = sel.value !== 'custom';
   if (sel.value === 'custom' && !$('pFrom').value) { $('pFrom').value = today().slice(0, 4) + '-01-01'; $('pTo').value = today(); }
 }
@@ -755,17 +760,28 @@ function setupFilters() {
   var L = state.data.lists;
   $('fChild').innerHTML = optionList(L.children, $('fChild').value, 'All children');
   $('fCategory').innerHTML = optionList(L.categories, $('fCategory').value, 'All categories');
+  var fp = $('fPeriod');
+  periodOptions(fp, fp.value || localPref('cet_exp_period') || 'all', 'all');
+  fp.querySelector('option[value="all"]').textContent = 'All dates';
+  $('fCustom').hidden = fp.value !== 'custom';
+  if (fp.value === 'custom' && !$('fFrom').value) { $('fFrom').value = today().slice(0, 4) + '-01-01'; $('fTo').value = today(); }
 }
+$('fPeriod').addEventListener('change', function () {
+  localPref('cet_exp_period', this.value);
+  $('fCustom').hidden = this.value !== 'custom';
+  if (this.value === 'custom' && !$('fFrom').value) { $('fFrom').value = today().slice(0, 4) + '-01-01'; $('fTo').value = today(); }
+  renderExpenses();
+});
 ['fSearch', 'fChild', 'fCategory', 'fFrom', 'fTo'].forEach(function (id) {
   document.getElementById(id).addEventListener('input', function () { renderExpenses(); });
 });
 function filteredExpenses() {
-  var q = $('fSearch').value.trim().toLowerCase(), c = $('fChild').value, cat = $('fCategory').value, f = $('fFrom').value, t = $('fTo').value;
+  var q = $('fSearch').value.trim().toLowerCase(), c = $('fChild').value, cat = $('fCategory').value;
+  var r = periodInfo($('fPeriod').value || 'all', 'fFrom', 'fTo');
   return state.data.expenses.filter(function (e) {
     if (c && e.child !== c) return false;
     if (cat && e.category !== cat) return false;
-    if (f && (!e.dateValid || e.date < f)) return false;
-    if (t && (!e.dateValid || e.date > t)) return false;
+    if (!r.all && (!e.dateValid || e.date < r.from || e.date > r.to)) return false;
     if (q && (e.description + ' ' + e.store + ' ' + e.notes + ' ' + e.items + ' ' + e.child + ' ' + e.category).toLowerCase().indexOf(q) < 0) return false;
     return true;
   }).sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
@@ -787,7 +803,8 @@ function bindRows(container) {
 function renderExpenses() {
   if (!state.data) return;
   var list = filteredExpenses();
-  $('expCount').textContent = list.length + ' expense' + (list.length === 1 ? '' : 's');
+  var r = periodInfo($('fPeriod').value || 'all', 'fFrom', 'fTo');
+  $('expCount').textContent = list.length + ' expense' + (list.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
   $('expSum').textContent = 'Total ' + money(sum(list.filter(function (e) { return e.dateValid; })));
   $('expList').innerHTML = list.length ? list.map(expenseRow).join('') : '<div class="empty">No expenses match these filters.</div>';
   bindRows('expList');
