@@ -285,7 +285,7 @@ img{max-width:100%}
 <body>
 
 <!-- ============ LOCK SCREEN ============ -->
-<section id="lock" class="lock">
+<section id="lock" class="lock" hidden>
   <div class="lock-card">
     <div class="lock-icon">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
@@ -579,7 +579,7 @@ function setupLogin() {
     if (!u || !pw) { $('lockMsg').textContent = 'Enter your username and password.'; return; }
     $('lSubmit').disabled = true; $('lSubmit').textContent = 'Signing in…'; $('lockMsg').textContent = '';
     api('login', u, pw).then(function (r) {
-      state.token = r.token; store('cet_token', r.token);
+      state.token = r.token; store('cet_token', r.token); store('cet_cache', null);
       $('lPass').value = '';
       openApp();
     }).catch(function (err) {
@@ -600,7 +600,7 @@ function applyRole() {
 }
 function lockApp(msg) {
   if (state.token) api('logout', state.token).catch(function () {});
-  state.token = null; store('cet_token', null); state.data = null;
+  state.token = null; store('cet_token', null); store('cet_cache', null); state.data = null;
   closeModal(); applyRole();
   $('app').hidden = true; $('lock').hidden = false;
   $('lockMsg').textContent = msg || '';
@@ -645,17 +645,26 @@ function show(view) {
 }
 function openApp() {
   $('lock').hidden = true; $('app').hidden = false; resetIdle();
-  $('kpis').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading your data…</p></div>';
-  return reload().then(function () { show(state.view); });
+  // Show the last saved copy right away, then refresh it from the server in the background.
+  var cached = null;
+  try { cached = JSON.parse(store('cet_cache') || 'null'); } catch (e) { cached = null; }
+  if (cached && cached.lists) { applyData(cached, true); show(state.view); }
+  else $('kpis').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading your data…</p></div>';
+  return reload().then(function () { if (!cached) show(state.view); });
+}
+function applyData(d, fromCache) {
+  state.data = d;
+  state.loadedAt = fromCache && d._savedAt ? new Date(d._savedAt) : new Date();
+  if (!fromCache) lastLoad = Date.now();
+  applyRole();
+  setupFilters(); setupReports();
+  $('lnkSheet').href = d.spreadsheetUrl; $('lnkReceipts').href = d.receiptsFolderUrl; $('lnkReports').href = d.reportsFolderUrl;
+  render();
 }
 function reload() {
   return authed('getBootstrap').then(function (d) {
-    state.data = d;
-    state.loadedAt = new Date(); lastLoad = Date.now();
-    applyRole();
-    setupFilters(); setupReports();
-    $('lnkSheet').href = d.spreadsheetUrl; $('lnkReceipts').href = d.receiptsFolderUrl; $('lnkReports').href = d.reportsFolderUrl;
-    render();
+    applyData(d, false);
+    try { d._savedAt = Date.now(); store('cet_cache', JSON.stringify(d)); } catch (e) { /* storage full: just skip the copy */ }
     autoImportSheetImages();
   }).catch(function (e) { if (state.token) toast(e.message, true); });
 }
@@ -1666,10 +1675,13 @@ $('dashPeriod').addEventListener('change', function () { localPref('cet_period',
    Start
    =================================================================== */
 setupLogin(); buildTabs();
-setTimeout(function () { api('getAuthState').then(function (s) {
-  if (!s.ready) { $('lockMsg').textContent = 'Accounts are not set up yet.'; return; }
-  if (state.token) openApp(); else $('lUser').focus();
-}).catch(function (e) { $('lockMsg').textContent = e.message; }); }, 0);
+// Already signed in: go straight to the app (no sign-in screen flash). Otherwise show the sign-in screen.
+setTimeout(function () {
+  if (state.token) { openApp(); return; }
+  $('lock').hidden = false; $('lUser').focus();
+  api('getAuthState').then(function (s) { if (!s.ready) $('lockMsg').textContent = 'Accounts are not set up yet.'; })
+    .catch(function (e) { $('lockMsg').textContent = e.message; });
+}, 0);
 
 /* ===================================================================
    Demo data — used ONLY when this file is opened outside Google Apps Script
