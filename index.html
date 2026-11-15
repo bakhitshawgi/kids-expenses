@@ -235,6 +235,16 @@ table.items td:last-child{text-align:right}
 .settings-list{display:flex;flex-direction:column;gap:12px;max-width:640px}
 .muted{color:var(--muted)}
 .mt{margin-top:12px}
+/* Mobile: never scroll sideways. iPhone date fields are wider than their box unless told otherwise. */
+html,body{overflow-x:hidden;max-width:100%}
+main,.app-wrap{overflow-x:clip}
+input,select,textarea{min-width:0;max-width:100%}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-height:44px;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+input[type=date]::-webkit-calendar-picker-indicator{margin-left:0}
+.filters>*,.form>*,.field,.grid>*,.split>*,.row .main{min-width:0}
+.chip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+img{max-width:100%}
 </style>
 </head>
 <body>
