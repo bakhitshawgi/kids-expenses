@@ -287,7 +287,7 @@ img{max-width:100%}
     <!-- Dashboard -->
     <section id="view-dashboard">
       <div class="page-head">
-        <div><h2>Dashboard</h2><p id="dashSub">Overview of spending on the children</p></div>
+        <div><h2>Dashboard</h2><p id="dashSub">Overview of spending on the children</p><p id="dashDate" class="muted" style="font-size:13px;margin:3px 0 0"></p></div>
         <select id="dashPeriod" style="width:auto"></select>
       </div>
       <div class="viewer-note" id="viewerNote" hidden>👁️ View-only account: you can see everything, but you cannot add, change or delete.</div>
@@ -554,6 +554,7 @@ function openApp() {
 function reload() {
   return authed('getBootstrap').then(function (d) {
     state.data = d;
+    state.loadedAt = new Date(); lastLoad = Date.now();
     applyRole();
     setupFilters(); setupReports();
     $('lnkSheet').href = d.spreadsheetUrl; $('lnkReceipts').href = d.receiptsFolderUrl; $('lnkReports').href = d.reportsFolderUrl;
@@ -575,6 +576,11 @@ function autoImportSheetImages() {
 }
 // Changes made directly in the Google Sheet show up when you come back to the page.
 var lastLoad = 0;
+// Keep the totals current: refresh every minute while the page is open (not while a form is open).
+setInterval(function () {
+  if (document.visibilityState !== 'visible' || !state.token || !state.data || !$('modal').hidden || importing) return;
+  reload();
+}, 60000);
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState !== 'visible' || !state.token || !state.data) return;
   if (!$('modal').hidden || Date.now() - lastLoad < 20000) return; // don't interrupt an open form
@@ -631,6 +637,9 @@ function renderDashboard() {
   var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink || e.receiptInSheet; }).length;
 
   $('dashSub').textContent = p === 'all' ? 'All recorded spending on the children' : 'Spending on the children in ' + p;
+  var now = new Date(), upd = state.loadedAt || now;
+  $('dashDate').textContent = '📅 ' + now.toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
+    ' · Updated ' + upd.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
   var w = state.data.warnings;
   $('warnings').innerHTML = w.length ? '<div class="warn-box"><b>Please check ' + w.length + ' item' + (w.length > 1 ? 's' : '') + ' in your sheet</b><ul>' + w.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '';
 
