@@ -98,6 +98,21 @@ main{max-width:1100px;margin:0 auto;padding:22px 16px 110px}
 .hero .big{font-size:40px;font-weight:800;letter-spacing:-.02em;margin:4px 0 10px;line-height:1.1}
 .hero .pills{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
 .hero .pill{background:rgba(255,255,255,.18);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;backdrop-filter:blur(4px)}
+.hero button.pill{border:0;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:600}
+.hero button.pill:hover{background:rgba(255,255,255,.3)}
+.hero button.pill::after{content:' ›';opacity:.8}
+.rc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.rc-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column;transition:transform .1s,box-shadow .15s}
+.rc-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,40,58,.1)}
+.rc-thumb{aspect-ratio:4/5;background:var(--surface-2);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:13px;text-align:center}
+.rc-thumb img{width:100%;height:100%;object-fit:cover;object-position:top}
+.rc-info{padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.rc-info .t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-info .a{font-weight:800;font-size:16px}
+.rc-info .m{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-filters{grid-template-columns:minmax(0,260px) minmax(0,220px)}
+@media (max-width:560px){.rc-grid{grid-template-columns:1fr 1fr;gap:10px}.rc-filters{grid-template-columns:1fr 1fr}}
+.back-link{border:0;background:transparent;color:var(--accent);font-weight:700;cursor:pointer;padding:0;margin-bottom:6px}
 @media (max-width:560px){.hero .big{font-size:34px}}
 
 /* Cards & components */
@@ -381,6 +396,26 @@ img{max-width:100%}
       <div class="list" id="supList"></div>
     </section>
 
+    <!-- Receipts (opened from the dashboard) -->
+    <section id="view-receipts" hidden>
+      <button class="back-link" id="rcBack">‹ Back to dashboard</button>
+      <div class="page-head"><div><h2>Receipts</h2><p>Every receipt with its details. Tap one to see it in full.</p></div></div>
+      <div class="filters rc-filters">
+        <select id="rcPeriod" aria-label="Period"></select>
+        <select id="rcType" aria-label="Type">
+          <option value="expense">Children's expenses</option>
+          <option value="support">Child support</option>
+          <option value="transfer">Other transfers</option>
+          <option value="all">Everything</option>
+        </select>
+        <div class="period-custom" id="rcCustom" hidden>
+          <input type="date" id="rcFromD" aria-label="From date"><span class="muted">to</span><input type="date" id="rcToD" aria-label="To date">
+        </div>
+      </div>
+      <div class="list-total"><span id="rcCount"></span><span id="rcSum" class="num"></span></div>
+      <div class="rc-grid" id="rcGrid"></div>
+    </section>
+
     <!-- Reports -->
     <section id="view-reports" hidden>
       <div class="page-head"><div><h2>Court report</h2><p>A PDF report for any period, with the receipts attached as exhibits</p></div></div>
@@ -602,7 +637,7 @@ function buildTabs() {
 }
 function show(view) {
   state.view = view;
-  TABS.forEach(function (t) { $('view-' + t[0]).hidden = t[0] !== view; });
+  document.querySelectorAll('main > section[id^="view-"]').forEach(function (s) { s.hidden = s.id !== 'view-' + view; });
   document.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
   render();
   window.scrollTo(0, 0);
@@ -654,6 +689,7 @@ function render() {
   if (state.view === 'expenses') renderExpenses();
   if (state.view === 'transfers') renderTransfers();
   if (state.view === 'support') renderSupport();
+  if (state.view === 'receipts') renderReceipts();
   if (state.view === 'reports') renderReportPreview();
 }
 
@@ -763,7 +799,13 @@ function renderDashboard() {
   });
 
   $('hero').innerHTML = '<div class="hero"><div class="lbl">Total spent on the children' + (range.all ? '' : ' ' + range.label) + '</div><div class="big num">' + money(total) + '</div><div class="pills">' +
-    '<span class="pill">📅 This month ' + money(thisMonth) + '</span><span class="pill">🧾 ' + exp.length + ' expenses</span><span class="pill">📎 ' + withReceipt + ' with receipt</span></div></div>';
+    '<span class="pill">📅 This month ' + money(thisMonth) + '</span><button class="pill" id="goExpenses">🧾 ' + exp.length + ' expenses</button><button class="pill" id="goReceipts">📎 ' + withReceipt + ' with receipt</button></div></div>';
+  $('goReceipts').onclick = function () { openReceipts(p, 'expense'); };
+  $('goExpenses').onclick = function () {
+    var fp = $('fPeriod'); setupFilters(); fp.value = p;
+    if (p === 'custom') { $('fFrom').value = $('pFrom').value; $('fTo').value = $('pTo').value; }
+    localPref('cet_exp_period', fp.value); $('fCustom').hidden = fp.value !== 'custom'; show('expenses');
+  };
   var kpi = function (label, value, sub, color, icon) { return '<div class="card kpi" style="--k:' + color + '"><div class="k-ico">' + icon + '</div><div class="label">' + label + '</div><div class="value num">' + value + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
   $('kpis').innerHTML =
     kpi('Paid by me', money(me), total ? (me / total * 100).toFixed(1) + '% of spending' : '—', 'var(--c1)', '🙋') +
@@ -934,6 +976,77 @@ function renderSupport() {
   $('supSum').textContent = 'Total ' + money(sum(list.filter(function (t) { return t.dateValid; })));
   $('supList').innerHTML = list.length ? list.map(function (x) { return x.kind === 't' ? transferRow(x.r) : expenseRow(x.r); }).join('') : '<div class="empty">No child support payments in this period.</div>';
   bindRows('supList');
+}
+function hasReceiptExp(e) { return !!(e.receiptId || e.receiptImageUrl || e.receiptInSheet || /^https?:\/\//i.test(e.receiptLink || '')); }
+function openReceipts(period, type) {
+  var sel = $('rcPeriod');
+  periodOptions(sel, period, 'all'); sel.querySelector('option[value="all"]').textContent = 'All dates';
+  if (period === 'custom') { $('rcFromD').value = $('pFrom').value; $('rcToD').value = $('pTo').value; }
+  $('rcType').value = type || 'expense';
+  show('receipts');
+}
+$('rcBack').addEventListener('click', function () { show('dashboard'); });
+$('rcPeriod').addEventListener('change', function () {
+  if (this.value === 'custom' && !$('rcFromD').value) { $('rcFromD').value = today().slice(0, 4) + '-01-01'; $('rcToD').value = today(); }
+  renderReceipts();
+});
+['rcType', 'rcFromD', 'rcToD'].forEach(function (id) { $(id).addEventListener('change', function () { renderReceipts(); }); });
+var thumbCache = {};
+function renderReceipts() {
+  var sel = $('rcPeriod');
+  if (!sel.options.length) { periodOptions(sel, 'all', 'all'); sel.querySelector('option[value="all"]').textContent = 'All dates'; }
+  $('rcCustom').hidden = sel.value !== 'custom';
+  var r = periodInfo(sel.value || 'all', 'rcFromD', 'rcToD'), type = $('rcType').value;
+  var inR = function (x) { return r.all || (x.dateValid && x.date >= r.from && x.date <= r.to); };
+  var items = [];
+  if (type === 'expense' || type === 'support' || type === 'all') {
+    state.data.expenses.forEach(function (e) {
+      if (!hasReceiptExp(e) || !inR(e)) return;
+      var sup = isSupportExp(e);
+      if ((type === 'expense' && sup) || (type === 'support' && !sup)) return;
+      items.push({ kind: 'e', r: e, title: e.description || '(no description)', label: sup ? 'Child support' : e.category, k: sup ? 'var(--c2)' : catColor(e.category) });
+    });
+  }
+  if (type === 'transfer' || type === 'support' || type === 'all') {
+    state.data.transfers.forEach(function (t) {
+      if (!t.receiptId || !inR(t)) return;
+      var sup = isSupport(t);
+      if ((type === 'transfer' && sup) || (type === 'support' && !sup)) return;
+      items.push({ kind: 't', r: t, title: t.purpose || (sup ? 'Child support' : 'Transfer'), label: sup ? 'Child support' : 'Transfer', k: sup ? 'var(--c2)' : 'var(--c6)' });
+    });
+  }
+  items.sort(function (a, b) { return a.r.date === b.r.date ? b.r.id - a.r.id : (a.r.date < b.r.date ? 1 : -1); });
+  $('rcCount').textContent = items.length + ' receipt' + (items.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
+  $('rcSum').textContent = 'Total ' + money(sum(items.map(function (x) { return x.r; }).filter(function (x) { return x.dateValid; })));
+  $('rcGrid').innerHTML = items.length ? items.map(function (x, i) {
+    var e = x.r;
+    return '<button class="rc-card" data-i="' + i + '" style="--k:' + x.k + '"><div class="rc-thumb" id="rcth' + i + '"><div class="spinner"></div></div>' +
+      '<div class="rc-info"><span class="a num">' + money(e.amount) + '</span><span class="t">' + esc(x.title) + '</span>' +
+      '<span class="m">📅 ' + esc(e.dateValid ? shortDate(e.date) : e.date) + '</span>' +
+      '<span class="m"><span class="chip cat" style="font-size:11.5px">' + esc(x.label) + '</span> ' + esc(e.child || (e.from ? e.from + ' → ' + e.to : '')) + '</span>' +
+      (e.store ? '<span class="m">📍 ' + esc(e.store) + '</span>' : '') + '</div></button>';
+  }).join('') : '<div class="empty" style="grid-column:1/-1">No receipts in this period.</div>';
+  $('rcGrid').querySelectorAll('.rc-card').forEach(function (b) {
+    var x = items[+b.getAttribute('data-i')];
+    b.onclick = function () { x.kind === 'e' ? openExpense(x.r.id) : openTransfer(x.r.id); };
+  });
+  // load pictures as the cards come into view
+  var load = function (i) {
+    var x = items[i], e = x.r, box = $('rcth' + i); if (!box || box.getAttribute('data-done')) return;
+    box.setAttribute('data-done', '1');
+    var show = function (src) { var b = $('rcth' + i); if (b) b.innerHTML = src ? '<img src="' + src + '" alt="Receipt" referrerpolicy="no-referrer">' : '🧾<br>Receipt file'; };
+    if (e.receiptId) {
+      if (thumbCache[e.receiptId] !== undefined) return show(thumbCache[e.receiptId]);
+      authed('getReceipt', e.receiptId, e.previewId).then(function (rc) { thumbCache[e.receiptId] = rc.dataUrl || ''; show(rc.dataUrl); }).catch(function () { show(''); });
+    } else if (e.receiptImageUrl) show(e.receiptImageUrl);
+    else show('');
+  };
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { io.unobserve(en.target); load(+en.target.id.slice(4)); } });
+    }, { rootMargin: '200px' });
+    items.forEach(function (x, i) { var b = $('rcth' + i); if (b) io.observe(b); });
+  } else items.forEach(function (x, i) { load(i); });
 }
 function setupTransferPeriod() {
   var tp = $('tPeriod');
