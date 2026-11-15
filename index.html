@@ -651,7 +651,10 @@ function render() {
 /* ===================================================================
    Dashboard
    =================================================================== */
-function validExpenses() { return state.data.expenses.filter(function (e) { return e.dateValid; }); }
+function isSupportExp(e) { return /child\s*support/i.test(e.category || ''); }
+function nonSupportCats() { return state.data.lists.categories.filter(function (c) { return !/child\s*support/i.test(c); }); }
+// Child support is not a children's expense: it lives in the Support tab.
+function validExpenses() { return state.data.expenses.filter(function (e) { return e.dateValid && !isSupportExp(e); }); }
 function validTransfers() { return state.data.transfers.filter(function (t) { return t.dateValid; }); }
 var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -717,7 +720,7 @@ function renderDashboard() {
   var thisMonth = sum(validExpenses().filter(function (e) { return e.date.slice(0, 7) === today().slice(0, 7); }));
   var sent = trf.filter(function (t) { return t.from === 'Me'; });
   var received = trf.filter(function (t) { return t.to === 'Me'; });
-  var supportPaid = sum(sent.filter(isSupport));
+  var supportPaid = sum(sent.filter(isSupport)) + sum(state.data.expenses.filter(function (e) { return isSupportExp(e) && e.dateValid && e.paidBy === 'Me' && inRange(e, range); }));
   var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink || e.receiptInSheet; }).length;
 
   $('dashSub').textContent = range.all ? 'All recorded spending on the children' : 'Spending on the children ' + range.label;
@@ -785,7 +788,7 @@ function renderDashboard() {
     return '<div class="month" title="' + MONTHS[+k.slice(5) - 1] + ' ' + k.slice(0, 4) + ': ' + money(mv[i]) + '"><span class="v num">' + (mv[i] ? '$' + Math.round(mv[i]) : '') + '</span><div class="col' + (mv[i] ? '' : ' zero') + '" style="height:' + Math.max(3, mv[i] / mmax * 130).toFixed(0) + 'px"></div><span class="m">' + MONTHS[+k.slice(5) - 1] + '</span></div>';
   }).join('') : '<div class="muted">No expenses yet.</div>';
 
-  var latest = state.data.expenses.slice().sort(function (a, b) { return (b.addedOn || b.date) > (a.addedOn || a.date) ? 1 : -1; }).slice(0, 5);
+  var latest = state.data.expenses.filter(function (e) { return !isSupportExp(e); }).sort(function (a, b) { return (b.addedOn || b.date) > (a.addedOn || a.date) ? 1 : -1; }).slice(0, 5);
   $('latest').innerHTML = latest.length ? latest.map(expenseRow).join('') : '<div class="empty">No expenses yet. Tap “Add receipt” to start.</div>';
   bindRows('latest');
 }
@@ -796,7 +799,7 @@ function renderDashboard() {
 function setupFilters() {
   var L = state.data.lists;
   $('fChild').innerHTML = optionList(L.children, $('fChild').value, 'All children');
-  $('fCategory').innerHTML = optionList(L.categories, $('fCategory').value, 'All categories');
+  $('fCategory').innerHTML = optionList(nonSupportCats(), $('fCategory').value, 'All categories');
   var fp = $('fPeriod');
   periodOptions(fp, fp.value || localPref('cet_exp_period') || 'all', 'all');
   fp.querySelector('option[value="all"]').textContent = 'All dates';
@@ -816,6 +819,7 @@ function filteredExpenses() {
   var q = $('fSearch').value.trim().toLowerCase(), c = $('fChild').value, cat = $('fCategory').value;
   var r = periodInfo($('fPeriod').value || 'all', 'fFrom', 'fTo');
   return state.data.expenses.filter(function (e) {
+    if (isSupportExp(e)) return false;
     if (c && e.child !== c) return false;
     if (cat && e.category !== cat) return false;
     if (!r.all && (!e.dateValid || e.date < r.from || e.date > r.to)) return false;
@@ -877,11 +881,15 @@ $('sPeriod').addEventListener('change', function () {
 function renderSupport() {
   setupSupportPeriod();
   var r = periodInfo($('sPeriod').value, 'sFromD', 'sToD');
-  var all = state.data.transfers.filter(isSupport);
+  var all = state.data.transfers.filter(isSupport).map(function (t) {
+    return { kind: 't', r: t, id: t.id, date: t.date, amount: t.amount, dateValid: t.dateValid, mine: t.from === 'Me', toMe: t.to === 'Me' };
+  }).concat(state.data.expenses.filter(isSupportExp).map(function (e) {
+    return { kind: 'e', r: e, id: e.id, date: e.date, amount: e.amount, dateValid: e.dateValid, mine: e.paidBy === 'Me', toMe: e.paidBy === 'Ex-spouse' };
+  }));
   var list = all.filter(function (t) { return r.all || (t.dateValid && t.date >= r.from && t.date <= r.to); })
     .sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
-  var paid = list.filter(function (t) { return t.dateValid && t.from === 'Me'; });
-  var received = list.filter(function (t) { return t.dateValid && t.to === 'Me'; });
+  var paid = list.filter(function (t) { return t.dateValid && t.mine; });
+  var received = list.filter(function (t) { return t.dateValid && t.toMe; });
 
   // months covered by the period (all dates: from the first payment to this month), never past this month
   var validAll = all.filter(function (t) { return t.dateValid; });
@@ -915,7 +923,7 @@ function renderSupport() {
 
   $('supCount').textContent = list.length + ' payment' + (list.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
   $('supSum').textContent = 'Total ' + money(sum(list.filter(function (t) { return t.dateValid; })));
-  $('supList').innerHTML = list.length ? list.map(transferRow).join('') : '<div class="empty">No child support payments in this period.</div>';
+  $('supList').innerHTML = list.length ? list.map(function (x) { return x.kind === 't' ? transferRow(x.r) : expenseRow(x.r); }).join('') : '<div class="empty">No child support payments in this period.</div>';
   bindRows('supList');
 }
 function setupTransferPeriod() {
@@ -1182,7 +1190,7 @@ function expenseForm(existing, upload) {
       state.upload = null; localPref('cet_lastChild', data.child);
       var list = state.data.expenses, i = list.findIndex(function (x) { return x.id === saved.id; });
       if (i >= 0) list[i] = saved; else list.push(saved);
-      closeModal(); toast(existing ? 'Changes saved.' : 'Expense saved.'); render();
+      closeModal(); toast(/child\s*support/i.test(data.category) ? 'Saved. Child support payments are in the Support tab.' : (existing ? 'Changes saved.' : 'Expense saved.')); render();
       if (state.data.warnings.length) reload();
     }).catch(function (err) { btn.disabled = false; btn.textContent = existing ? 'Save changes' : 'Save expense'; toast(err.message, true); });
   };
@@ -1322,7 +1330,7 @@ function setupReports() {
     var prev = {}; $(el).querySelectorAll('input').forEach(function (i) { prev[i.value] = i.checked; });
     $(el).innerHTML = values.map(function (v) { return '<label><input type="checkbox" value="' + esc(v) + '"' + (prev[v] === false ? '' : ' checked') + '> ' + esc(v) + '</label>'; }).join('');
   };
-  mk('rChildren', L.children); mk('rCategories', L.categories);
+  mk('rChildren', L.children); mk('rCategories', nonSupportCats());
   if (!$('rFrom').value) { $('rFrom').value = today().slice(0, 4) + '-01-01'; $('rTo').value = today(); }
   var by = localPref('cet_preparedBy'); if (by && !$('rBy').value) $('rBy').value = by;
   var y = +today().slice(0, 4), m = +today().slice(5, 7);
