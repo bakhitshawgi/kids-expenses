@@ -443,7 +443,7 @@ img{max-width:100%}
         </div>
         <div class="card">
           <h3>Session</h3>
-          <p class="muted" style="margin-top:0">The app locks itself after 10 minutes without activity.</p>
+          <p class="muted" style="margin-top:0">You stay signed in when you refresh or reopen the page. The app locks itself after 6 hours without activity, or when you press Lock.</p>
           <button class="btn" id="sReload">Reload data</button>
           <button class="btn danger" id="sLock">Lock now</button>
         </div>
@@ -499,7 +499,8 @@ function authed(fn) {
     throw e;
   });
 }
-function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { return null; } }
+// Sign-in survives refreshing or reopening the page (until 6 hours without activity or Lock).
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 function localPref(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
 /* ===================================================================
@@ -570,7 +571,15 @@ function lockApp(msg) {
   setTimeout(function () { $('lUser').focus(); }, 50);
 }
 var idleTimer;
-function resetIdle() { clearTimeout(idleTimer); if (state.token) idleTimer = setTimeout(function () { lockApp('Locked after 10 minutes without activity.'); }, 10 * 60 * 1000); }
+var IDLE_MS = 6 * 60 * 60 * 1000;
+function resetIdle() {
+  clearTimeout(idleTimer);
+  if (!state.token) return;
+  try { localStorage.setItem('cet_last', String(Date.now())); } catch (e) {}
+  idleTimer = setTimeout(function () { lockApp('Locked after 6 hours without activity.'); }, IDLE_MS);
+}
+// A saved sign-in older than 6 hours of inactivity is not reused.
+(function () { try { var last = +localStorage.getItem('cet_last') || 0; if (state.token && Date.now() - last > IDLE_MS) { state.token = null; localStorage.removeItem('cet_token'); } } catch (e) {} })();
 ['click', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { document.addEventListener(ev, resetIdle, { passive: true }); });
 
 /* ===================================================================
