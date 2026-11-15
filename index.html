@@ -157,6 +157,15 @@ main{max-width:1100px;margin:0 auto;padding:22px 16px 110px}
 .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr;gap:8px;margin-bottom:12px}
 .filters .period-custom{grid-column:1/-1;justify-content:flex-start}
 .trf-filters{grid-template-columns:minmax(0,260px)}
+table.months-tbl{width:100%;border-collapse:collapse;font-size:14px}
+table.months-tbl td{padding:8px 4px;border-bottom:1px solid var(--border)}
+table.months-tbl td:nth-child(2){text-align:right}
+table.months-tbl td:last-child{text-align:right;width:110px}
+.st{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+.st.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.st.no{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.st.part{background:var(--warn-soft);color:var(--warn)}
+@media (max-width:760px){.bottom-nav .tab{font-size:10px;padding:6px 0}}
 @media (max-width:900px){.trf-filters{grid-template-columns:1fr}}
 @media (max-width:900px){.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
 input[type=text],input[type=search],input[type=date],input[type=number],input[type=password],input[type=tel],select,textarea{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:9px 12px;min-height:44px}
@@ -340,7 +349,7 @@ img{max-width:100%}
     <!-- Transfers -->
     <section id="view-transfers" hidden>
       <div class="page-head">
-        <div><h2>Money transfers</h2><p>Child support, reimbursements and other payments between parents</p></div>
+        <div><h2>Money transfers</h2><p>Reimbursements, shared expenses and other payments between parents. Child support has its own tab.</p></div>
         <button class="btn primary edit-only" data-action="add-transfer">+ Add transfer</button>
       </div>
       <div class="filters trf-filters">
@@ -352,6 +361,24 @@ img{max-width:100%}
       <div class="grid kpis" id="trfKpis"></div>
       <div class="list-total mt"><span id="trfCount"></span><span id="trfSum" class="num"></span></div>
       <div class="list" id="trfList"></div>
+    </section>
+
+    <!-- Child support -->
+    <section id="view-support" hidden>
+      <div class="page-head">
+        <div><h2>Child support</h2><p>Every child support payment, month by month</p></div>
+        <button class="btn primary edit-only" data-action="add-support">+ Add payment</button>
+      </div>
+      <div class="filters trf-filters">
+        <select id="sPeriod" aria-label="Period"></select>
+        <div class="period-custom" id="sCustom" hidden>
+          <input type="date" id="sFromD" aria-label="From date"><span class="muted">to</span><input type="date" id="sToD" aria-label="To date">
+        </div>
+      </div>
+      <div class="grid kpis" id="supKpis"></div>
+      <div class="card mt"><h3>Month by month</h3><div id="supMonths"></div></div>
+      <div class="list-total mt"><span id="supCount"></span><span id="supSum" class="num"></span></div>
+      <div class="list" id="supList"></div>
     </section>
 
     <!-- Reports -->
@@ -425,9 +452,9 @@ img{max-width:100%}
   </main>
 
   <nav class="bottom-nav" id="tabsBottom"></nav>
-  <button class="btn primary fab edit-only" data-action="add-expense">
+  <button class="btn primary fab edit-only" data-action="add-any">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    Add receipt
+    Add
   </button>
 </div>
 
@@ -553,6 +580,7 @@ var TABS = [
   ['dashboard', 'Dashboard', '<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 21h8v-6H3z"/>'],
   ['expenses', 'Expenses', '<path d="M4 4h16v16l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 9h8M8 13h6"/>'],
   ['transfers', 'Transfers', '<path d="M7 7h13l-4-4M17 17H4l4 4"/>'],
+  ['support', 'Support', '<path d="M11 17l2 2a1 1 0 1 0 3-3"/><path d="M14 14l2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="M21 3l1 11h-2"/><path d="M3 3L2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>'],
   ['reports', 'Reports', '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'],
   ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>']
 ];
@@ -616,6 +644,7 @@ function render() {
   if (state.view === 'dashboard') renderDashboard();
   if (state.view === 'expenses') renderExpenses();
   if (state.view === 'transfers') renderTransfers();
+  if (state.view === 'support') renderSupport();
   if (state.view === 'reports') renderReportPreview();
 }
 
@@ -688,7 +717,6 @@ function renderDashboard() {
   var thisMonth = sum(validExpenses().filter(function (e) { return e.date.slice(0, 7) === today().slice(0, 7); }));
   var sent = trf.filter(function (t) { return t.from === 'Me'; });
   var received = trf.filter(function (t) { return t.to === 'Me'; });
-  var isSupport = function (t) { return /child\s*support/i.test(t.purpose + ' ' + t.reference + ' ' + t.notes); };
   var supportPaid = sum(sent.filter(isSupport));
   var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink || e.receiptInSheet; }).length;
 
@@ -831,6 +859,65 @@ function transferRow(t) {
     (t.receiptId ? '<span class="chip">🧾 Proof</span>' : '') + '</div></div><div class="amount num" style="color:' + (dir === 'Received' ? 'var(--good)' : 'inherit') + '">' +
     (dir === 'Received' ? '+' : '') + money(t.amount) + '<small>' + dir + '</small></div></button>';
 }
+function isSupport(t) { return /child\s*support/i.test((t.purpose || '') + ' ' + (t.reference || '') + ' ' + (t.notes || '')); }
+function setupSupportPeriod() {
+  var sp = $('sPeriod');
+  periodOptions(sp, sp.value || localPref('cet_sup_period') || ('y:' + today().slice(0, 4)), 'y:' + today().slice(0, 4));
+  sp.querySelector('option[value="all"]').textContent = 'All dates';
+  $('sCustom').hidden = sp.value !== 'custom';
+  if (sp.value === 'custom' && !$('sFromD').value) { $('sFromD').value = today().slice(0, 4) + '-01-01'; $('sToD').value = today(); }
+}
+$('sPeriod').addEventListener('change', function () {
+  localPref('cet_sup_period', this.value);
+  $('sCustom').hidden = this.value !== 'custom';
+  if (this.value === 'custom' && !$('sFromD').value) { $('sFromD').value = today().slice(0, 4) + '-01-01'; $('sToD').value = today(); }
+  renderSupport();
+});
+['sFromD', 'sToD'].forEach(function (id) { $(id).addEventListener('change', function () { renderSupport(); }); });
+function renderSupport() {
+  setupSupportPeriod();
+  var r = periodInfo($('sPeriod').value, 'sFromD', 'sToD');
+  var all = state.data.transfers.filter(isSupport);
+  var list = all.filter(function (t) { return r.all || (t.dateValid && t.date >= r.from && t.date <= r.to); })
+    .sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
+  var paid = list.filter(function (t) { return t.dateValid && t.from === 'Me'; });
+  var received = list.filter(function (t) { return t.dateValid && t.to === 'Me'; });
+
+  // months covered by the period (all dates: from the first payment to this month), never past this month
+  var validAll = all.filter(function (t) { return t.dateValid; });
+  var firstKey = validAll.length ? validAll.map(function (t) { return t.date; }).sort()[0].slice(0, 7) : today().slice(0, 7);
+  // months before the first recorded payment are not counted as missed
+  var startKey = r.all ? firstKey : (r.from.slice(0, 7) > firstKey ? r.from.slice(0, 7) : firstKey);
+  var endKey = r.all ? today().slice(0, 7) : (r.to.slice(0, 7) < today().slice(0, 7) ? r.to.slice(0, 7) : today().slice(0, 7));
+  var months = [], cy = +startKey.slice(0, 4), cm = +startKey.slice(5, 7);
+  while ((cy + '-' + pad2(cm)) <= endKey && months.length < 60) { months.push(cy + '-' + pad2(cm)); cm++; if (cm > 12) { cm = 1; cy++; } }
+  var byMonth = {};
+  paid.forEach(function (t) { var k = t.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + t.amount; });
+  var amounts = paid.map(function (t) { return t.amount; });
+  var usual = amounts.length ? amounts.slice().sort(function (a, b) { return a - b; })[Math.floor(amounts.length / 2)] : 0;
+  var monthsPaid = months.filter(function (k) { return byMonth[k] > 0; }).length;
+  var last = paid[0];
+
+  var kpi = function (l, v, s, c, i) { return '<div class="card kpi" style="--k:' + c + '"><div class="k-ico">' + i + '</div><div class="label">' + l + '</div><div class="value num">' + v + '</div><div class="sub">' + s + '</div></div>'; };
+  $('supKpis').innerHTML =
+    kpi('Child support paid', money(sum(paid)), r.all ? 'All dates' : r.label.charAt(0).toUpperCase() + r.label.slice(1), 'var(--c2)', '🤝') +
+    kpi('Payments', paid.length, paid.length === 1 ? 'payment' : 'payments', 'var(--c1)', '🧾') +
+    kpi('Months paid', monthsPaid + ' of ' + months.length, months.length - monthsPaid ? (months.length - monthsPaid) + ' month(s) with no payment' : 'Every month paid', 'var(--c6)', '📅') +
+    kpi('Monthly average', money(months.length ? sum(paid) / months.length : 0), 'Over ' + months.length + ' month' + (months.length === 1 ? '' : 's'), 'var(--c8)', '📊') +
+    kpi('Last payment', last ? money(last.amount) : '—', last ? shortDate(last.date) : 'No payments yet', 'var(--c3)', '⏱️') +
+    (received.length ? kpi('Received by me', money(sum(received)), received.length + ' payment(s)', 'var(--c4)', '📥') : '');
+
+  $('supMonths').innerHTML = months.length ? '<table class="months-tbl">' + months.slice().reverse().map(function (k) {
+    var v = byMonth[k] || 0;
+    var st = !v ? '<span class="st no">Not paid</span>' : (usual && v < usual * 0.9 ? '<span class="st part">Partial</span>' : '<span class="st ok">Paid</span>');
+    return '<tr><td>' + MONTH_NAMES[+k.slice(5) - 1] + ' ' + k.slice(0, 4) + '</td><td class="num">' + (v ? money(v) : '—') + '</td><td>' + st + '</td></tr>';
+  }).join('') + '</table>' : '<div class="muted">No months in this period.</div>';
+
+  $('supCount').textContent = list.length + ' payment' + (list.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
+  $('supSum').textContent = 'Total ' + money(sum(list.filter(function (t) { return t.dateValid; })));
+  $('supList').innerHTML = list.length ? list.map(transferRow).join('') : '<div class="empty">No child support payments in this period.</div>';
+  bindRows('supList');
+}
 function setupTransferPeriod() {
   var tp = $('tPeriod');
   periodOptions(tp, tp.value || localPref('cet_trf_period') || 'all', 'all');
@@ -848,24 +935,21 @@ $('tPeriod').addEventListener('change', function () {
 function renderTransfers() {
   setupTransferPeriod();
   var r = periodInfo($('tPeriod').value || 'all', 'tFromD', 'tToD');
-  var list = state.data.transfers.filter(function (t) { return r.all || (t.dateValid && t.date >= r.from && t.date <= r.to); })
+  var list = state.data.transfers.filter(function (t) { return !isSupport(t) && (r.all || (t.dateValid && t.date >= r.from && t.date <= r.to)); })
     .sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
   var valid = list.filter(function (t) { return t.dateValid; });
   var sent = valid.filter(function (t) { return t.from === 'Me'; }), rec = valid.filter(function (t) { return t.to === 'Me'; });
-  var isSupport = function (t) { return /child\s*support/i.test(t.purpose + ' ' + t.reference + ' ' + t.notes); };
-  var support = sent.filter(isSupport);
   var when = r.all ? 'All dates' : r.label.charAt(0).toUpperCase() + r.label.slice(1);
   var kpi = function (l, v, s, c, i) { return '<div class="card kpi" style="--k:' + c + '"><div class="k-ico">' + i + '</div><div class="label">' + l + '</div><div class="value num">' + v + '</div><div class="sub">' + s + '</div></div>'; };
   $('trfKpis').innerHTML =
     kpi('Sent by me', money(sum(sent)), sent.length + ' transfer' + (sent.length === 1 ? '' : 's'), 'var(--c3)', '📤') +
     kpi('Received by me', money(sum(rec)), rec.length + ' transfer' + (rec.length === 1 ? '' : 's'), 'var(--c2)', '📥') +
-    kpi('Child support paid', money(sum(support)), support.length + ' payment' + (support.length === 1 ? '' : 's'), 'var(--c1)', '🤝') +
     kpi('Net', money(sum(rec) - sum(sent)), 'Received − sent', 'var(--c8)', '⚖️') +
     kpi('Number of transfers', valid.length, when, 'var(--c6)', '🔁') +
     kpi('Average transfer', money(valid.length ? sum(valid) / valid.length : 0), when, 'var(--c9)', '📊');
   $('trfCount').textContent = list.length + ' transfer' + (list.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
   $('trfSum').textContent = 'Total ' + money(sum(valid));
-  $('trfList').innerHTML = list.length ? list.map(transferRow).join('') : '<div class="empty">' + (r.all ? 'No transfers recorded yet.' : 'No transfers in this period.') + '</div>';
+  $('trfList').innerHTML = list.length ? list.map(transferRow).join('') : '<div class="empty">' + (r.all ? 'No other transfers yet. Child support payments are in the Support tab.' : 'No other transfers in this period.') + '</div>';
   bindRows('trfList');
 }
 
@@ -901,15 +985,28 @@ $('zoomClose').addEventListener('click', function () { $('zoom').hidden = true; 
 document.addEventListener('click', function (e) {
   var a = e.target.closest('[data-action]'); if (!a) return;
   var act = a.getAttribute('data-action');
+  if (act === 'add-any') chooseType();
   if (act === 'add-expense') chooseSource('expense');
   if (act === 'add-transfer') chooseSource('transfer');
+  if (act === 'add-support') chooseSource('support');
 });
+function chooseType() {
+  openModal(head('What are you adding?') +
+    '<div class="sheet-body"><div class="choices">' +
+    '<button class="choice" id="tyExp" style="--k:var(--c1)"><span class="ch-ico" style="font-size:26px">🧾</span>Expense for the children<small>Clothes, school, food, medical…</small></button>' +
+    '<button class="choice" id="tySup" style="--k:var(--c2)"><span class="ch-ico" style="font-size:26px">🤝</span>Child support payment<small>Monthly support you paid</small></button>' +
+    '<button class="choice" id="tyTrf" style="--k:var(--c6)"><span class="ch-ico" style="font-size:26px">🔁</span>Other money transfer<small>Reimbursement, shared cost…</small></button>' +
+    '</div></div>', true);
+  $('tyExp').onclick = function () { chooseSource('expense'); };
+  $('tySup').onclick = function () { chooseSource('support'); };
+  $('tyTrf').onclick = function () { chooseSource('transfer'); };
+}
 function chooseSource(kind) {
   state.addKind = kind;
   var cam = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
   var up = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>';
   var pen = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-  openModal(head(kind === 'expense' ? 'Add an expense' : 'Add a money transfer') +
+  openModal(head(kind === 'expense' ? 'Add an expense' : kind === 'support' ? 'Add a child support payment' : 'Add a money transfer') +
     '<div class="sheet-body"><div class="choices">' +
     '<button class="choice" id="chCam" style="--k:var(--c1)"><span class="ch-ico">' + cam + '</span>Take a photo<small>Use the phone camera</small></button>' +
     '<button class="choice" id="chUp" style="--k:var(--c6)"><span class="ch-ico">' + up + '</span>Upload a file<small>Image or PDF</small></button>' +
@@ -917,7 +1014,7 @@ function chooseSource(kind) {
     '</div><p class="muted" style="font-size:13px;margin:14px 2px 0">The receipt is read automatically. You check the details before anything is saved. The original file is kept unchanged in your Google Drive.</p></div>', true);
   $('chCam').onclick = function () { state.attach = null; $('camInput').value = ''; $('camInput').click(); };
   $('chUp').onclick = function () { state.attach = null; $('fileInput').value = ''; $('fileInput').click(); };
-  $('chMan').onclick = function () { state.upload = null; kind === 'expense' ? expenseForm(null, null) : transferForm(null, null); };
+  $('chMan').onclick = function () { state.upload = null; kind === 'expense' ? expenseForm(null, null) : transferForm(null, null, { support: kind === 'support' }); };
 }
 function onPicked(file) { if (state.attach) state.attach(file); else handleFile(file); }
 $('camInput').addEventListener('change', function () { if (this.files[0]) onPicked(this.files[0]); });
@@ -955,7 +1052,7 @@ function handleFile(file) {
     return authed('uploadReceipt', { name: file.name, mimeType: file.type || 'application/octet-stream', data: r[0], previewData: r[1] }).then(function (res) {
       res.previewSrc = r[1] ? 'data:image/jpeg;base64,' + r[1] : '';
       state.upload = res;
-      kind === 'expense' ? expenseForm(null, res) : transferForm(null, res);
+      kind === 'expense' ? expenseForm(null, res) : transferForm(null, res, { support: kind === 'support' });
     });
   }).catch(function (e) { closeModal(); toast(e.message, true); });
 }
@@ -1149,10 +1246,15 @@ function openExpense(id) {
 /* ===================================================================
    Transfer form & details
    =================================================================== */
-function transferForm(existing, upload) {
+function supportPurpose() {
+  return state.data.lists.purposes.find(function (x) { return /child\s*support/i.test(x); }) || 'Child Support';
+}
+function transferForm(existing, upload, opts) {
   var L = state.data.lists, p = (upload && upload.parsed) || {}, t = existing || {};
+  var support = existing ? isSupport(t) : !!(opts && opts.support);
   var val = function (k, fb) { return existing ? (t[k] || '') : (fb || ''); };
-  openModal(head(existing ? 'Edit transfer' : 'Review transfer') +
+  var defPurpose = support && !existing ? supportPurpose() : '';
+  openModal(head(existing ? (support ? 'Edit child support payment' : 'Edit transfer') : (support ? 'Child support payment' : 'Review transfer')) +
     '<div class="sheet-body"><div class="split"><div><div id="rcptBox">' + receiptPane(upload ? upload.previewSrc : '', upload, existing && t.receiptId) + '</div>' + attachButtons(!!(existing ? t.receiptId : upload)) + '</div><div>' +
     (upload ? (upload.ocrError ? '<div class="ocr-note err">' + esc(upload.ocrError) + '</div>' : '<div class="ocr-note">✓ Screenshot read. Please check the details.</div>') : '') +
     '<div class="form">' +
@@ -1160,7 +1262,7 @@ function transferForm(existing, upload) {
     '<div class="field"><label>Amount ($) <span class="req">*</span></label><input type="number" step="0.01" min="0" inputmode="decimal" id="tAmount" value="' + esc(existing ? t.amount : (p.total != null ? p.total : '')) + '"></div>' +
     '<div class="field"><label>From <span class="req">*</span></label><select id="tFrom">' + optionList(L.parties, val('from', 'Me')) + '</select></div>' +
     '<div class="field"><label>To <span class="req">*</span></label><select id="tTo">' + optionList(L.parties, val('to', 'Ex-spouse')) + '</select></div>' +
-    '<div class="field"><label>Purpose</label><select id="tPurpose">' + optionList(L.purposes, val('purpose'), '—') + '</select></div>' +
+    '<div class="field"><label>Purpose</label><select id="tPurpose">' + optionList(L.purposes, val('purpose', defPurpose), '—') + '</select></div>' +
     '<div class="field"><label>Reference / Confirmation #</label><input type="text" id="tRef" value="' + esc(val('reference', p.reference)) + '"></div>' +
     '<div class="field full"><label>Notes</label><textarea id="tNotes">' + esc(val('notes')) + '</textarea></div>' +
     '</div></div></div></div>' +
