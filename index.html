@@ -593,7 +593,7 @@ function renderDashboard() {
   var received = trf.filter(function (t) { return t.to === 'Me'; });
   var isSupport = function (t) { return /child\s*support/i.test(t.purpose + ' ' + t.reference + ' ' + t.notes); };
   var supportPaid = sum(sent.filter(isSupport));
-  var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink; }).length;
+  var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink || e.receiptInSheet; }).length;
 
   $('dashSub').textContent = p === 'all' ? 'All recorded spending on the children' : 'Spending on the children in ' + p;
   var w = state.data.warnings;
@@ -660,7 +660,7 @@ function filteredExpenses() {
   }).sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
 }
 function expenseRow(e) {
-  var hasReceipt = e.receiptId || e.receiptLink;
+  var hasReceipt = e.receiptId || e.receiptLink || e.receiptInSheet;
   return '<button class="row' + (e.dateValid ? '' : ' bad') + '" data-exp="' + e.id + '" style="--k:' + catColor(e.category) + '"><div class="cat-ico">' + catIcon(e.category) + '</div>' +
     '<div class="main"><div class="title">' + esc(e.description || '(no description)') + '</div><div class="meta">' +
     '<span class="chip">📅 ' + esc(e.dateValid ? shortDate(e.date) : e.date) + '</span>' +
@@ -864,7 +864,7 @@ function expenseForm(existing, upload) {
   var src = upload ? upload.previewSrc : '';
   var lastChild = localPref('cet_lastChild') || '';
   openModal(head(existing ? 'Edit expense' : 'Review expense') +
-    '<div class="sheet-body"><div class="split"><div><div id="rcptBox">' + receiptPane(src, upload, existing && (e.receiptId)) + '</div>' + attachButtons(!!(existing ? e.receiptId : upload)) +
+    '<div class="sheet-body"><div class="split"><div><div id="rcptBox">' + receiptPane(src || (existing && !e.receiptId ? e.receiptImageUrl : ''), upload, existing && (e.receiptId)) + '</div>' + attachButtons(!!(existing ? (e.receiptId || e.receiptInSheet) : upload)) +
     (upload && upload.text ? '<details class="raw mt"><summary>Text read from the receipt</summary><pre>' + esc(upload.text) + '</pre></details>' : '') +
     '</div><div>' + note +
     '<div class="form">' +
@@ -945,10 +945,12 @@ function loadReceiptInto(holderId, entry) {
 function openExpense(id) {
   var e = state.data.expenses.find(function (x) { return x.id === id; }); if (!e) return;
   var items = textToItems(e.items);
-  var linkOnly = !e.receiptId && e.receiptLink;
+  var linkOnly = !e.receiptId && /^https?:\/\//i.test(e.receiptLink || '');
   openModal(head('Expense details') +
     '<div class="sheet-body"><div class="split"><div>' +
     (e.receiptId ? '<div class="receipt-view" id="dHolder"><div class="ph"><div class="spinner"></div><p>Loading receipt…</p></div></div><div id="dHolderMeta" class="mt"></div>' :
+      e.receiptImageUrl ? '<div class="receipt-view"><img src="' + esc(e.receiptImageUrl) + '" alt="Receipt" id="dSheetImg" referrerpolicy="no-referrer"></div><div class="muted mt" style="font-size:12.5px">This receipt image is stored inside the Google Sheet (row ' + e.id + ').</div>' :
+      e.receiptInSheet ? '<div class="receipt-view"><div class="ph">🧾 The receipt image is stored inside the Google Sheet (row ' + e.id + ').<br><a class="btn small mt" target="_blank" rel="noopener" href="' + esc(state.data.spreadsheetUrl) + '">Open the Google Sheet</a></div></div>' :
       linkOnly ? '<div class="receipt-view"><div class="ph">Receipt link saved in the sheet.<br><a class="btn small mt" target="_blank" rel="noopener" href="' + esc(e.receiptLink) + '">Open receipt link</a></div></div>' :
       '<div class="receipt-view"><div class="ph">No receipt attached.</div></div>') +
     '</div><div>' +
@@ -970,6 +972,7 @@ function openExpense(id) {
     '</div></div></div>' +
     '<div class="sheet-foot"><button class="btn danger edit-only" id="dDel">Delete</button><button class="btn edit-only" id="dEdit">Edit</button><button class="btn primary" data-close>Close</button></div>');
   if (e.receiptId) loadReceiptInto('dHolder', e);
+  if ($('dSheetImg')) { $('dSheetImg').onclick = function () { zoomImage(this.src); }; $('dSheetImg').onerror = function () { this.parentNode.innerHTML = '<div class="ph">🧾 The receipt image is stored inside the Google Sheet (row ' + e.id + ').</div>'; }; }
   $('dEdit').onclick = function () { expenseForm(e, null); };
   $('dDel').onclick = function () {
     if (!confirm('Delete this expense (' + money(e.amount) + ' on ' + e.date + ')?\n\nThe receipt file stays in your Drive and the deleted row is kept in the Audit Log sheet.')) return;
@@ -1086,7 +1089,7 @@ function renderReportPreview() {
   if (!o.from || !o.to || o.from > o.to) { $('rPreview').innerHTML = '<div class="muted">Choose a valid period.</div>'; return; }
   var rows = reportRows(o);
   var trf = validTransfers().filter(function (t) { return t.date >= o.from && t.date <= o.to; });
-  var receipts = rows.filter(function (e) { return e.receiptId; }).length;
+  var receipts = rows.filter(function (e) { return e.receiptId || e.receiptImageUrl; }).length;
   $('rPreview').innerHTML = '<dl class="kv">' +
     '<dt>Expenses</dt><dd class="num">' + rows.length + ' · <b>' + money(sum(rows)) + '</b></dd>' +
     '<dt>Paid by me</dt><dd class="num">' + money(sum(rows.filter(function (e) { return e.paidBy === 'Me'; }))) + '</dd>' +
