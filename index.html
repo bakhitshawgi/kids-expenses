@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Children's Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f3fb; --surface:#ffffff; --surface-2:#f2f1fa; --border:#e6e3f3; --text:#1d1b33; --muted:#6b6886;
+  --accent:#5b4bdb; --accent-2:#8b5cf6; --accent-ink:#ffffff; --accent-soft:#eeebff;
+  --grad:linear-gradient(135deg,#5b4bdb 0%,#8b5cf6 55%,#d946ef 100%);
+  --grad-soft:linear-gradient(135deg,#eeebff 0%,#f6edff 100%);
+  --good:#0f9d74; --warn:#b45309; --warn-soft:#fff6e6; --bad:#d33a4a; --bad-soft:#fdecee;
+  --c1:#5b4bdb; --c2:#10b981; --c3:#f59e0b; --c4:#ec4899; --c5:#ef4444; --c6:#0ea5e9; --c7:#84cc16; --c8:#a855f7; --c9:#64748b;
+  --radius:18px; --shadow:0 1px 2px rgba(40,30,110,.05),0 6px 18px rgba(40,30,110,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#100f1c; --surface:#1a1930; --surface-2:#23213d; --border:#302d52; --text:#eeecff; --muted:#a6a2c8;
+    --accent:#a397ff; --accent-2:#c4a7ff; --accent-ink:#130f2e; --accent-soft:#2a2650;
+    --grad:linear-gradient(135deg,#4c3fc9 0%,#7c4ae8 55%,#b938d3 100%);
+    --grad-soft:linear-gradient(135deg,#25214a 0%,#2c2152 100%);
+    --good:#34d399; --warn:#fbbf24; --warn-soft:#2d2512; --bad:#fb7185; --bad-soft:#341a22;
+    --c1:#8b80ff; --c2:#34d399; --c3:#fbbf24; --c4:#f472b6; --c5:#f87171; --c6:#38bdf8; --c7:#a3e635; --c8:#c084fc; --c9:#94a3b8;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#100f1c; --surface:#1a1930; --surface-2:#23213d; --border:#302d52; --text:#eeecff; --muted:#a6a2c8;
+  --accent:#a397ff; --accent-2:#c4a7ff; --accent-ink:#130f2e; --accent-soft:#2a2650;
+  --grad:linear-gradient(135deg,#4c3fc9 0%,#7c4ae8 55%,#b938d3 100%);
+  --grad-soft:linear-gradient(135deg,#25214a 0%,#2c2152 100%);
+  --good:#34d399; --warn:#fbbf24; --warn-soft:#2d2512; --bad:#fb7185; --bad-soft:#341a22;
+  --c1:#8b80ff; --c2:#34d399; --c3:#fbbf24; --c4:#f472b6; --c5:#f87171; --c6:#38bdf8; --c7:#a3e635; --c8:#c084fc; --c9:#94a3b8;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:15px;line-height:1.45}
+body{background:radial-gradient(1200px 500px at 100% -10%,rgba(139,92,246,.10),transparent 60%),radial-gradient(900px 400px at -10% 10%,rgba(14,165,233,.08),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+
+/* Lock screen */
+.lock{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--grad);position:relative;overflow:hidden}
+.lock::before,.lock::after{content:"";position:absolute;border-radius:50%;filter:blur(2px);opacity:.35}
+.lock::before{width:420px;height:420px;background:#f0abfc;top:-140px;right:-120px}
+.lock::after{width:360px;height:360px;background:#7dd3fc;bottom:-140px;left:-120px}
+.lock-card{position:relative;z-index:1;width:100%;max-width:370px;background:var(--surface);border-radius:28px;padding:34px 24px 26px;text-align:center;box-shadow:0 30px 60px rgba(30,20,90,.35)}
+.lock-icon{width:64px;height:64px;border-radius:20px;background:var(--grad);color:#fff;display:grid;place-items:center;margin:0 auto 16px;box-shadow:0 10px 24px rgba(91,75,219,.4)}
+.lock h1{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+.lock p{color:var(--muted);margin:0 0 20px}
+.login-form{display:flex;flex-direction:column;gap:12px;text-align:left}
+.login-form label{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:-6px}
+.login-form input{min-height:50px;font-size:16px;border-radius:14px;background:var(--surface-2);border-color:transparent}
+.login-form input:focus{background:var(--surface)}
+.login-form .btn{min-height:52px;font-size:16px;margin-top:6px}
+.pw-wrap{position:relative}
+.pw-wrap button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;font-weight:700;padding:6px}
+.role-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.viewer-note{background:var(--accent-soft);color:var(--accent);border-radius:14px;padding:10px 14px;font-size:13.5px;font-weight:600;margin-bottom:14px}
+body.viewer .edit-only{display:none!important}
+.lock .msg{min-height:22px;margin-top:16px;font-size:14px;color:var(--bad)}
+
+/* Layout */
+.topbar{position:sticky;top:0;z-index:20;background:var(--grad);color:#fff;box-shadow:0 4px 20px rgba(91,75,219,.25)}
+.topbar-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16.5px;flex:1;min-width:0;letter-spacing:-.01em}
+.brand .logo{width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;flex:none;backdrop-filter:blur(4px)}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:4px}
+.topbar .tab{border:0;background:transparent;padding:8px 12px;border-radius:12px;cursor:pointer;color:rgba(255,255,255,.82);font-weight:600;display:flex;align-items:center;gap:6px}
+.topbar .tab:hover{background:rgba(255,255,255,.12);color:#fff}
+.topbar .tab.active{background:#fff;color:var(--accent)}
+.topbar .icon-btn{border:0;background:rgba(255,255,255,.18);color:#fff}
+.icon-btn{border:1px solid var(--border);background:var(--surface);border-radius:12px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;color:var(--muted);flex:none}
+main{max-width:1100px;margin:0 auto;padding:22px 16px 110px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.page-head h2{margin:0;font-size:25px;letter-spacing:-.02em}
+.page-head p{margin:2px 0 0;color:var(--muted)}
+.bottom-nav{display:none}
+@media (max-width:760px){
+  .tabs{display:none}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--surface);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,30,110,.08)}
+  .bottom-nav .tab{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;border:0;background:transparent;color:var(--muted);font-weight:600;border-radius:12px;display:flex;align-items:center;cursor:pointer}
+  .bottom-nav .tab.active{color:var(--accent);background:var(--accent-soft)}
+  main{padding-bottom:140px}
+}
+
+/* Hero */
+.hero{background:var(--grad);color:#fff;border-radius:24px;padding:22px 22px 20px;position:relative;overflow:hidden;box-shadow:0 14px 34px rgba(91,75,219,.28);margin-bottom:14px}
+.hero::after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.10);right:-70px;top:-90px}
+.hero::before{content:"";position:absolute;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08);right:120px;bottom:-90px}
+.hero .lbl{opacity:.85;font-weight:600;font-size:14px}
+.hero .big{font-size:40px;font-weight:800;letter-spacing:-.02em;margin:4px 0 10px;line-height:1.1}
+.hero .pills{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
+.hero .pill{background:rgba(255,255,255,.18);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;backdrop-filter:blur(4px)}
+@media (max-width:560px){.hero .big{font-size:34px}}
+
+/* Cards & components */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+#trfKpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.kpis,#trfKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{position:relative;overflow:hidden;border:0;background:var(--surface)}
+.kpi::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,color-mix(in srgb,var(--k,var(--c1)) 14%,transparent),transparent 65%);pointer-events:none}
+.kpi .k-ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--k,var(--c1)) 18%,transparent);color:var(--k,var(--c1));font-size:18px;margin-bottom:10px;position:relative}
+.kpi .label{color:var(--muted);font-size:13px;font-weight:600;position:relative}
+.kpi .value{font-size:24px;font-weight:800;margin-top:2px;letter-spacing:-.02em;position:relative}
+.kpi .sub{color:var(--muted);font-size:12.5px;margin-top:2px;position:relative}
+.two{grid-template-columns:1fr 1fr}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.card h3{margin:0 0 14px;font-size:16px;letter-spacing:-.01em}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:118px 1fr 84px;gap:10px;align-items:center;font-size:13.5px}
+.bar-track{height:12px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+.bar-fill{height:100%;border-radius:8px}
+.bar-row .amt{text-align:right;font-weight:600}
+.donut-wrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+@media (max-width:460px){.donut-wrap{grid-template-columns:1fr}.donut{margin:0 auto}}
+.donut{width:150px;height:150px;border-radius:50%;position:relative}
+.donut-hole{position:absolute;inset:22px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.donut-hole b{font-size:17px;letter-spacing:-.01em}
+.donut-hole span{font-size:11.5px;color:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.legend div{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center}
+.legend .amt{font-weight:600}
+.months{display:flex;align-items:flex-end;gap:6px;height:180px;padding-top:10px}
+.month{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.month .col{width:100%;max-width:34px;border-radius:10px 10px 4px 4px;background:var(--grad);min-height:3px}
+.month .col.zero{background:var(--surface-2)}
+.month .m{font-size:11px;color:var(--muted);font-weight:600}
+.month .v{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--surface-2);font-size:12.5px;color:var(--muted);white-space:nowrap;font-weight:500}
+.chip.cat{background:color-mix(in srgb,var(--k) 14%,transparent);color:color-mix(in srgb,var(--k) 75%,var(--text))}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.warn-box{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text);border-radius:16px;padding:12px 14px;font-size:13.5px;margin-bottom:14px}
+.warn-box b{color:var(--warn)}
+.warn-box ul{margin:6px 0 0;padding-left:18px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;border:1px solid var(--border);background:var(--surface);padding:10px 16px;font-weight:700;cursor:pointer;text-decoration:none;color:var(--text);min-height:44px;transition:transform .08s,box-shadow .15s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(91,75,219,.3)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.btn.small{min-height:34px;padding:6px 12px;font-size:13.5px;border-radius:11px}
+.btn:disabled{opacity:.55;cursor:default}
+.fab{position:fixed;right:22px;bottom:26px;z-index:25;border-radius:999px;padding:14px 22px;box-shadow:0 12px 28px rgba(91,75,219,.45)}
+@media (max-width:760px){.fab{bottom:86px;right:16px}}
+
+/* Filters & list */
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+@media (max-width:900px){.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
+input[type=text],input[type=search],input[type=date],input[type=number],input[type=password],input[type=tel],select,textarea{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:9px 12px;min-height:44px}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.list-total{display:flex;justify-content:space-between;color:var(--muted);font-size:13.5px;margin:0 2px 8px;font-weight:600}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:11px 13px;cursor:pointer;text-align:left;width:100%;transition:transform .1s,box-shadow .15s,border-color .15s}
+.row:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));box-shadow:0 6px 18px rgba(40,30,110,.08);transform:translateY(-1px)}
+.cat-ico{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;font-size:22px;background:color-mix(in srgb,var(--k) 16%,transparent)}
+.row .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.row .amount{font-weight:800;text-align:right;font-size:15.5px}
+.row .amount small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.row .main{min-width:0}
+.row.bad{border-color:color-mix(in srgb,var(--warn) 55%,transparent)}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(20,14,50,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{background:var(--surface);border-radius:24px;width:100%;max-width:980px;max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--border);box-shadow:0 30px 70px rgba(20,14,50,.35)}
+.sheet.narrow{max-width:560px}
+.sheet-head{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid var(--border);z-index:2}
+.sheet-head h3{margin:0;font-size:18px;letter-spacing:-.01em}
+.sheet-body{padding:18px}
+.sheet-foot{position:sticky;bottom:0;background:var(--surface);display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border);flex-wrap:wrap}
+@media (max-width:760px){.modal{padding:0;align-items:flex-end}.sheet{border-radius:24px 24px 0 0;max-height:94vh}}
+
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:560px){.choices{grid-template-columns:1fr}}
+.choice{border:0;border-radius:18px;padding:22px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:700;color:var(--text);background:color-mix(in srgb,var(--k) 12%,var(--surface));transition:transform .1s}
+.choice:hover{transform:translateY(-2px)}
+.choice small{font-weight:500;color:var(--muted)}
+.choice .ch-ico{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:var(--k);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--k) 40%,transparent)}
+
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px}
+.receipt-view{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;min-height:240px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.receipt-view img{max-width:100%;max-height:70vh;display:block;cursor:zoom-in}
+.receipt-view .ph{color:var(--muted);padding:20px;text-align:center}
+.rc-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.rc-actions .btn{flex:1;min-width:130px}
+.rc-label{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:12px}
+@media (max-width:760px){.split{grid-template-columns:1fr}.receipt-view{min-height:140px}.receipt-view img{max-height:45vh}}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.field label .req{color:var(--bad)}
+.items-editor{display:flex;flex-direction:column;gap:6px}
+.item-line{display:grid;grid-template-columns:1fr 110px 36px;gap:6px}
+.item-line button{border:1px solid var(--border);background:var(--surface);border-radius:10px;cursor:pointer;color:var(--muted)}
+.ocr-note{font-size:13px;border-radius:12px;padding:10px 12px;background:var(--accent-soft);margin-bottom:12px}
+.ocr-note.err{background:var(--warn-soft)}
+details.raw summary{cursor:pointer;color:var(--muted);font-size:13px}
+details.raw pre{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:10px;max-height:220px;overflow:auto}
+
+.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 12px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;word-break:break-word}
+.big-amount{font-size:34px;font-weight:800;margin:2px 0 10px;letter-spacing:-.02em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+table.items{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+table.items td{padding:7px 4px;border-bottom:1px solid var(--border)}
+table.items td:last-child{text-align:right}
+.section-title{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin:16px 0 6px}
+
+.zoom{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.92);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:50px 10px 20px}
+.zoom img{max-width:none;width:min(1400px,200%)}
+.zoom .close{position:fixed;top:12px;right:12px;background:#fff;color:#111;border:0;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer}
+
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:6px 12px;cursor:pointer;background:var(--surface);font-size:14px}
+.checks label:has(input:checked){background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent);color:var(--accent);font-weight:600}
+.checks input{accent-color:var(--accent)}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1d1b33;color:#fff;padding:12px 18px;border-radius:14px;z-index:90;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25);font-weight:600}
+.toast.err{background:#b4233a}
+@media (max-width:760px){.toast{bottom:90px}}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:40px 10px;color:var(--muted)}
+.loading p{margin-top:12px}
+.settings-list{display:flex;flex-direction:column;gap:12px;max-width:640px}
+.muted{color:var(--muted)}
+.mt{margin-top:12px}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<section id="lock" class="lock">
+  <div class="lock-card">
+    <div class="lock-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h1 id="lockTitle">Children's Expense Tracker</h1>
+    <p id="lockSub">Sign in to continue</p>
+    <form class="login-form" id="loginForm" autocomplete="on">
+      <label for="lUser">Username</label>
+      <input type="text" id="lUser" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <label for="lPass">Password</label>
+      <div class="pw-wrap"><input type="password" id="lPass" name="password" autocomplete="current-password" required><button type="button" id="lShow" aria-label="Show password">Show</button></div>
+      <button class="btn primary" type="submit" id="lSubmit">Sign in</button>
+    </form>
+    <div class="msg" id="lockMsg" role="alert"></div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 9h8M8 13h6"/></svg>
+      </div><span>Children's Expense Tracker</span></div>
+      <span class="role-badge" id="roleBadge" hidden></span>
+      <nav class="tabs" id="tabsTop"></nav>
+      <button class="icon-btn" id="lockBtn" title="Lock" aria-label="Lock">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="view-dashboard">
+      <div class="page-head">
+        <div><h2>Dashboard</h2><p id="dashSub">Overview of spending on the children</p></div>
+        <select id="dashPeriod" style="width:auto"></select>
+      </div>
+      <div class="viewer-note" id="viewerNote" hidden>👁️ View-only account: you can see everything, but you cannot add, change or delete.</div>
+      <div id="hero"></div>
+      <div id="warnings"></div>
+      <div class="grid kpis" id="kpis"></div>
+      <div class="grid two mt">
+        <div class="card"><h3>By category</h3><div class="bars" id="byCategory"></div></div>
+        <div class="card"><h3>By child</h3><div class="bars" id="byChild"></div>
+          <h3 class="mt" style="margin-top:20px">Money transfers</h3><div class="bars" id="byTransfer"></div></div>
+      </div>
+      <div class="card mt"><h3>Monthly spending</h3><div class="months" id="monthly"></div></div>
+      <div class="card mt"><h3>Latest expenses</h3><div class="list" id="latest"></div></div>
+    </section>
+
+    <!-- Expenses -->
+    <section id="view-expenses" hidden>
+      <div class="page-head">
+        <div><h2>Expenses</h2><p>Every expense with its receipt</p></div>
+        <button class="btn primary edit-only" data-action="add-expense">+ Add expense</button>
+      </div>
+      <div class="filters">
+        <input class="search" type="search" id="fSearch" placeholder="Search description, store, notes…" aria-label="Search">
+        <select id="fChild" aria-label="Child"></select>
+        <select id="fCategory" aria-label="Category"></select>
+        <input type="date" id="fFrom" aria-label="From date">
+        <input type="date" id="fTo" aria-label="To date">
+      </div>
+      <div class="list-total"><span id="expCount"></span><span id="expSum" class="num"></span></div>
+      <div class="list" id="expList"></div>
+    </section>
+
+    <!-- Transfers -->
+    <section id="view-transfers" hidden>
+      <div class="page-head">
+        <div><h2>Money transfers</h2><p>Child support, reimbursements and other payments between parents</p></div>
+        <button class="btn primary edit-only" data-action="add-transfer">+ Add transfer</button>
+      </div>
+      <div class="grid kpis" id="trfKpis"></div>
+      <div class="list mt" id="trfList"></div>
+    </section>
+
+    <!-- Reports -->
+    <section id="view-reports" hidden>
+      <div class="page-head"><div><h2>Court report</h2><p>A PDF report for any period, with the receipts attached as exhibits</p></div></div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Period</h3>
+          <div class="quick" id="quickRanges"></div>
+          <div class="form">
+            <div class="field"><label for="rFrom">From</label><input type="date" id="rFrom"></div>
+            <div class="field"><label for="rTo">To</label><input type="date" id="rTo"></div>
+          </div>
+          <div class="section-title">Children</div><div class="checks" id="rChildren"></div>
+          <div class="section-title">Categories</div><div class="checks" id="rCategories"></div>
+          <div class="section-title">Include</div>
+          <div class="checks">
+            <label><input type="checkbox" id="rTransfers" checked> Money transfers</label>
+            <label><input type="checkbox" id="rReceipts" checked> Receipt images (exhibits)</label>
+          </div>
+          <div class="form mt">
+            <div class="field full"><label for="rTitle">Report title</label><input type="text" id="rTitle" value="Children's Expense Report"></div>
+            <div class="field full"><label for="rBy">Prepared by (your name)</label><input type="text" id="rBy" placeholder="Optional"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Preview</h3>
+          <div id="rPreview"></div>
+          <div class="mt" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary edit-only" id="rGenerate">Generate PDF report</button>
+            <button class="btn" id="rCsv">Export CSV (Excel)</button>
+          </div>
+          <div id="rResult" class="mt"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" hidden>
+      <div class="page-head"><div><h2>Settings</h2><p>Access code and data locations</p></div></div>
+      <div class="settings-list">
+        <div class="card">
+          <h3>Change your password</h3>
+          <div class="form">
+            <div class="field"><label for="sOld">Current password</label><input type="password" id="sOld" autocomplete="current-password"></div>
+            <div class="field"><label for="sNew">New password (8+ characters)</label><input type="password" id="sNew" autocomplete="new-password"></div>
+          </div>
+          <button class="btn mt" id="sChange">Update password</button>
+        </div>
+        <div class="card">
+          <h3>Your data</h3>
+          <p class="muted" style="margin-top:0">Everything stays in your own Google account.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn" id="lnkSheet" target="_blank" rel="noopener">Open Google Sheet</a>
+            <a class="btn" id="lnkReceipts" target="_blank" rel="noopener">Receipts folder</a>
+            <a class="btn" id="lnkReports" target="_blank" rel="noopener">Reports folder</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Session</h3>
+          <p class="muted" style="margin-top:0">The app locks itself after 10 minutes without activity.</p>
+          <button class="btn" id="sReload">Reload data</button>
+          <button class="btn danger" id="sLock">Lock now</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" id="tabsBottom"></nav>
+  <button class="btn primary fab edit-only" data-action="add-expense">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Add receipt
+  </button>
+</div>
+
+<div id="modal" class="modal" hidden></div>
+<div id="zoom" class="zoom" hidden><button class="close" id="zoomClose">Close ✕</button><img id="zoomImg" alt="Receipt"></div>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="fileInput" accept="image/*,application/pdf" hidden>
+
+<script>window.CET_API_URL = "https://script.google.com/macros/s/AKfycbzwR3NBzzFEQMa-33FjvMLDGFi9G8GhAFXKt3O6L4sn9tcp8TKE9ObNraYH54_gU7NoOw/exec";</script>
+<script>
+/* ===================================================================
+   API bridge — google.script.run inside Apps Script, demo data elsewhere
+   =================================================================== */
+var IN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+// Set by the hosted copy of this page (index.html) to the Apps Script /exec address.
+var API_URL = window.CET_API_URL || '';
+function api(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return new Promise(function (resolve, reject) {
+    if (!IN_GAS && API_URL) {
+      // text/plain keeps this a "simple" request (no CORS preflight); no cookies are sent.
+      return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), credentials: 'omit', redirect: 'follow' })
+        .then(function (r) { if (!r.ok) throw new Error('The server did not answer (' + r.status + '). Try again.'); return r.json(); })
+        .then(function (j) { if (j.ok) resolve(j.result); else reject(new Error(j.error)); })
+        .catch(function (e) { reject(e instanceof Error ? e : new Error(String(e))); });
+    }
+    if (!IN_GAS) {
+      return DemoApi[fn].apply(null, args).then(resolve, reject);
+    }
+    var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(function (e) {
+      reject(e instanceof Error ? e : new Error(String(e && e.message || e)));
+    });
+    runner[fn].apply(runner, args);
+  });
+}
+function authed(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return api.apply(null, [fn, state.token].concat(args)).catch(function (e) {
+    if (String(e.message).indexOf('SESSION_EXPIRED') >= 0) { lockApp('Your session expired. Enter your code again.'); }
+    throw e;
+  });
+}
+function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { return null; } }
+function localPref(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+/* ===================================================================
+   State & helpers
+   =================================================================== */
+var state = { token: store('cet_token'), data: null, view: 'dashboard', pin: '', hasPin: true, current: null, upload: null };
+var $ = function (id) { return document.getElementById(id); };
+var fmt = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' });
+function money(n) { return fmt.format(n || 0).replace('CA$', '$').replace('CAD', '$').trim(); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)', 'var(--c7)', 'var(--c8)', 'var(--c9)'];
+function catColor(c) { var i = state.data.lists.categories.indexOf(c); return COLORS[(i < 0 ? 8 : i) % COLORS.length]; }
+var CAT_ICONS = { 'Clothing': '👕', 'Medical': '💊', 'School': '🎒', 'Activities': '⚽', 'Childcare': '🧸', 'Food/Groceries': '🍎', 'Transportation': '🚌', 'Gifts': '🎁', 'Other': '📦' };
+function catIcon(c) { return CAT_ICONS[c] || '🧾'; }
+function shortDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? MONTHS[+m[2] - 1] + ' ' + (+m[3]) + ', ' + m[1] : 'Check date'; }
+function sum(a) { return a.reduce(function (s, x) { return s + (x.amount || 0); }, 0); }
+function today() { return state.data ? state.data.today : new Date().toISOString().slice(0, 10); }
+function toast(msg, isErr) {
+  var t = $('toast'); t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : ''); t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, isErr ? 6000 : 3200);
+}
+function optionList(values, selected, blankLabel) {
+  return (blankLabel !== undefined ? '<option value="">' + esc(blankLabel) + '</option>' : '') +
+    values.map(function (v) { return '<option' + (v === selected ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+}
+function dateBadge(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return '<div class="date-badge"><div class="d">?</div><div class="mo">date</div></div>';
+  return '<div class="date-badge"><div class="d">' + (+m[3]) + '</div><div class="mo">' + MONTHS[+m[2] - 1] + ' ' + m[1].slice(2) + '</div></div>';
+}
+
+/* ===================================================================
+   Lock screen
+   =================================================================== */
+function setupLogin() {
+  $('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var u = $('lUser').value.trim(), pw = $('lPass').value;
+    if (!u || !pw) { $('lockMsg').textContent = 'Enter your username and password.'; return; }
+    $('lSubmit').disabled = true; $('lSubmit').textContent = 'Signing in…'; $('lockMsg').textContent = '';
+    api('login', u, pw).then(function (r) {
+      state.token = r.token; store('cet_token', r.token);
+      $('lPass').value = '';
+      openApp();
+    }).catch(function (err) {
+      $('lPass').value = ''; $('lPass').focus(); $('lockMsg').textContent = err.message;
+    }).then(function () { $('lSubmit').disabled = false; $('lSubmit').textContent = 'Sign in'; });
+  });
+  $('lShow').addEventListener('click', function () {
+    var show = $('lPass').type === 'password';
+    $('lPass').type = show ? 'text' : 'password'; this.textContent = show ? 'Hide' : 'Show';
+  });
+}
+function applyRole() {
+  var viewer = state.data && state.data.role !== 'editor';
+  document.body.classList.toggle('viewer', !!viewer);
+  $('viewerNote').hidden = !viewer;
+  $('roleBadge').hidden = !state.data;
+  if (state.data) $('roleBadge').textContent = (viewer ? '👁️ ' : '✏️ ') + state.data.user;
+}
+function lockApp(msg) {
+  if (state.token) api('logout', state.token).catch(function () {});
+  state.token = null; store('cet_token', null); state.data = null;
+  closeModal(); applyRole();
+  $('app').hidden = true; $('lock').hidden = false;
+  $('lockMsg').textContent = msg || '';
+  setTimeout(function () { $('lUser').focus(); }, 50);
+}
+var idleTimer;
+function resetIdle() { clearTimeout(idleTimer); if (state.token) idleTimer = setTimeout(function () { lockApp('Locked after 10 minutes without activity.'); }, 10 * 60 * 1000); }
+['click', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { document.addEventListener(ev, resetIdle, { passive: true }); });
+
+/* ===================================================================
+   App shell
+   =================================================================== */
+var TABS = [
+  ['dashboard', 'Dashboard', '<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 21h8v-6H3z"/>'],
+  ['expenses', 'Expenses', '<path d="M4 4h16v16l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 9h8M8 13h6"/>'],
+  ['transfers', 'Transfers', '<path d="M7 7h13l-4-4M17 17H4l4 4"/>'],
+  ['reports', 'Reports', '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'],
+  ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>']
+];
+function buildTabs() {
+  var html = TABS.map(function (t) {
+    return '<button class="tab" data-view="' + t[0] + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + t[2] + '</svg>' + t[1] + '</button>';
+  }).join('');
+  $('tabsTop').innerHTML = html; $('tabsBottom').innerHTML = html;
+  document.querySelectorAll('[data-view]').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-view')); }); });
+}
+function show(view) {
+  state.view = view;
+  TABS.forEach(function (t) { $('view-' + t[0]).hidden = t[0] !== view; });
+  document.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+  render();
+  window.scrollTo(0, 0);
+}
+function openApp() {
+  $('lock').hidden = true; $('app').hidden = false; resetIdle();
+  $('kpis').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading your data…</p></div>';
+  return reload().then(function () { show(state.view); });
+}
+function reload() {
+  return authed('getBootstrap').then(function (d) {
+    state.data = d;
+    applyRole();
+    setupFilters(); setupReports();
+    $('lnkSheet').href = d.spreadsheetUrl; $('lnkReceipts').href = d.receiptsFolderUrl; $('lnkReports').href = d.reportsFolderUrl;
+    render();
+  }).catch(function (e) { if (state.token) toast(e.message, true); });
+}
+function render() {
+  if (!state.data) return;
+  if (state.view === 'dashboard') renderDashboard();
+  if (state.view === 'expenses') renderExpenses();
+  if (state.view === 'transfers') renderTransfers();
+  if (state.view === 'reports') renderReportPreview();
+}
+
+/* ===================================================================
+   Dashboard
+   =================================================================== */
+function validExpenses() { return state.data.expenses.filter(function (e) { return e.dateValid; }); }
+function validTransfers() { return state.data.transfers.filter(function (t) { return t.dateValid; }); }
+function setupPeriodSelect() {
+  var years = {};
+  validExpenses().concat(validTransfers()).forEach(function (x) { years[x.date.slice(0, 4)] = 1; });
+  years[today().slice(0, 4)] = 1;
+  var ys = Object.keys(years).sort().reverse();
+  var sel = $('dashPeriod'), cur = sel.value || today().slice(0, 4);
+  sel.innerHTML = ys.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('') + '<option value="all">All time</option>';
+  sel.value = ys.indexOf(cur) >= 0 || cur === 'all' ? cur : ys[0];
+}
+function inPeriod(x, p) { return p === 'all' || x.date.slice(0, 4) === p; }
+function bars(el, pairs, colorFn) {
+  var max = Math.max.apply(null, pairs.map(function (p) { return p[1]; }).concat([1]));
+  $(el).innerHTML = pairs.length ? pairs.map(function (p, i) {
+    return '<div class="bar-row"><span>' + esc(p[0]) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + (p[1] / max * 100).toFixed(1) + '%;background:' + (colorFn ? colorFn(p[0], i) : COLORS[i % COLORS.length]) + '"></div></div><span class="amt num">' + money(p[1]) + '</span></div>';
+  }).join('') : '<div class="muted">Nothing recorded for this period.</div>';
+}
+function groupBy(arr, key) {
+  var g = {};
+  arr.forEach(function (x) { var k = x[key] || '(blank)'; g[k] = (g[k] || 0) + x.amount; });
+  return Object.keys(g).map(function (k) { return [k, g[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+}
+function renderDashboard() {
+  setupPeriodSelect();
+  var p = $('dashPeriod').value;
+  var exp = validExpenses().filter(function (e) { return inPeriod(e, p); });
+  var trf = validTransfers().filter(function (t) { return inPeriod(t, p); });
+  var total = sum(exp);
+  var me = sum(exp.filter(function (e) { return e.paidBy === 'Me'; }));
+  var ex = sum(exp.filter(function (e) { return e.paidBy === 'Ex-spouse'; }));
+  var thisMonth = sum(validExpenses().filter(function (e) { return e.date.slice(0, 7) === today().slice(0, 7); }));
+  var sent = trf.filter(function (t) { return t.from === 'Me'; });
+  var received = trf.filter(function (t) { return t.to === 'Me'; });
+  var isSupport = function (t) { return /child\s*support/i.test(t.purpose + ' ' + t.reference + ' ' + t.notes); };
+  var supportPaid = sum(sent.filter(isSupport));
+  var withReceipt = exp.filter(function (e) { return e.receiptId || e.receiptLink; }).length;
+
+  $('dashSub').textContent = p === 'all' ? 'All recorded spending on the children' : 'Spending on the children in ' + p;
+  var w = state.data.warnings;
+  $('warnings').innerHTML = w.length ? '<div class="warn-box"><b>Please check ' + w.length + ' item' + (w.length > 1 ? 's' : '') + ' in your sheet</b><ul>' + w.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '';
+
+  $('hero').innerHTML = '<div class="hero"><div class="lbl">Total spent on the children' + (p === 'all' ? '' : ' in ' + p) + '</div><div class="big num">' + money(total) + '</div><div class="pills">' +
+    '<span class="pill">📅 This month ' + money(thisMonth) + '</span><span class="pill">🧾 ' + exp.length + ' expenses</span><span class="pill">📎 ' + withReceipt + ' with receipt</span></div></div>';
+  var kpi = function (label, value, sub, color, icon) { return '<div class="card kpi" style="--k:' + color + '"><div class="k-ico">' + icon + '</div><div class="label">' + label + '</div><div class="value num">' + value + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
+  $('kpis').innerHTML =
+    kpi('Paid by me', money(me), total ? (me / total * 100).toFixed(1) + '% of spending' : '—', 'var(--c1)', '🙋') +
+    kpi('Paid by ex-spouse', money(ex), total ? (ex / total * 100).toFixed(1) + '% of spending' : '—', 'var(--c4)', '👤') +
+    kpi('Child support paid', money(supportPaid), 'From your transfers', 'var(--c2)', '🤝') +
+    kpi('Transfers sent', money(sum(sent)), sent.length + ' transfer' + (sent.length === 1 ? '' : 's'), 'var(--c3)', '📤') +
+    kpi('Transfers received', money(sum(received)), received.length + ' transfer' + (received.length === 1 ? '' : 's'), 'var(--c6)', '📥') +
+    kpi('Net (me − ex-spouse)', money(me - ex), 'Difference in spending', 'var(--c8)', '⚖️');
+
+  var cats = groupBy(exp, 'category'), acc = 0;
+  var stops = cats.map(function (c) { var s = acc; acc += total ? c[1] / total * 100 : 0; return catColor(c[0]) + ' ' + s.toFixed(2) + '% ' + acc.toFixed(2) + '%'; });
+  $('byCategory').innerHTML = cats.length ? '<div class="donut-wrap"><div class="donut" style="background:conic-gradient(' + stops.join(',') + ')"><div class="donut-hole"><b class="num">' + money(total) + '</b><span>' + cats.length + ' categories</span></div></div><div class="legend">' +
+    cats.map(function (c) { return '<div><span>' + catIcon(c[0]) + '</span><span><span class="dot" style="background:' + catColor(c[0]) + ';margin-right:6px"></span>' + esc(c[0]) + '</span><span class="amt num">' + money(c[1]) + '</span></div>'; }).join('') + '</div></div>'
+    : '<div class="muted">Nothing recorded for this period.</div>';
+  bars('byChild', groupBy(exp, 'child'));
+  bars('byTransfer', [['Sent by me', sum(sent)], ['Received by me', sum(received)]].filter(function (x) { return x[1] > 0; }), function (k) { return k.indexOf('Sent') === 0 ? 'var(--c3)' : 'var(--c2)'; });
+
+  // monthly
+  var months = [];
+  if (p === 'all') {
+    var keys = {}; exp.forEach(function (e) { keys[e.date.slice(0, 7)] = 1; });
+    months = Object.keys(keys).sort().slice(-12);
+  } else {
+    for (var i = 1; i <= 12; i++) months.push(p + '-' + (i < 10 ? '0' : '') + i);
+  }
+  var mv = months.map(function (k) { return sum(exp.filter(function (e) { return e.date.slice(0, 7) === k; })); });
+  var mmax = Math.max.apply(null, mv.concat([1]));
+  $('monthly').innerHTML = months.length ? months.map(function (k, i) {
+    return '<div class="month" title="' + MONTHS[+k.slice(5) - 1] + ' ' + k.slice(0, 4) + ': ' + money(mv[i]) + '"><span class="v num">' + (mv[i] ? '$' + Math.round(mv[i]) : '') + '</span><div class="col' + (mv[i] ? '' : ' zero') + '" style="height:' + Math.max(3, mv[i] / mmax * 130).toFixed(0) + 'px"></div><span class="m">' + MONTHS[+k.slice(5) - 1] + '</span></div>';
+  }).join('') : '<div class="muted">No expenses yet.</div>';
+
+  var latest = state.data.expenses.slice().sort(function (a, b) { return (b.addedOn || b.date) > (a.addedOn || a.date) ? 1 : -1; }).slice(0, 5);
+  $('latest').innerHTML = latest.length ? latest.map(expenseRow).join('') : '<div class="empty">No expenses yet. Tap “Add receipt” to start.</div>';
+  bindRows('latest');
+}
+
+/* ===================================================================
+   Expenses list
+   =================================================================== */
+function setupFilters() {
+  var L = state.data.lists;
+  $('fChild').innerHTML = optionList(L.children, $('fChild').value, 'All children');
+  $('fCategory').innerHTML = optionList(L.categories, $('fCategory').value, 'All categories');
+}
+['fSearch', 'fChild', 'fCategory', 'fFrom', 'fTo'].forEach(function (id) {
+  document.getElementById(id).addEventListener('input', function () { renderExpenses(); });
+});
+function filteredExpenses() {
+  var q = $('fSearch').value.trim().toLowerCase(), c = $('fChild').value, cat = $('fCategory').value, f = $('fFrom').value, t = $('fTo').value;
+  return state.data.expenses.filter(function (e) {
+    if (c && e.child !== c) return false;
+    if (cat && e.category !== cat) return false;
+    if (f && (!e.dateValid || e.date < f)) return false;
+    if (t && (!e.dateValid || e.date > t)) return false;
+    if (q && (e.description + ' ' + e.store + ' ' + e.notes + ' ' + e.items + ' ' + e.child + ' ' + e.category).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }).sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
+}
+function expenseRow(e) {
+  var hasReceipt = e.receiptId || e.receiptLink;
+  return '<button class="row' + (e.dateValid ? '' : ' bad') + '" data-exp="' + e.id + '" style="--k:' + catColor(e.category) + '"><div class="cat-ico">' + catIcon(e.category) + '</div>' +
+    '<div class="main"><div class="title">' + esc(e.description || '(no description)') + '</div><div class="meta">' +
+    '<span class="chip">📅 ' + esc(e.dateValid ? shortDate(e.date) : e.date) + '</span>' +
+    '<span class="chip cat">' + esc(e.category) + '</span>' +
+    '<span class="chip">' + esc(e.child) + '</span>' + (e.store ? '<span class="chip">' + esc(e.store) + '</span>' : '') +
+    (hasReceipt ? '<span class="chip" title="Receipt attached">🧾 Receipt</span>' : '') + (e.dateValid ? '' : '<span class="chip" style="color:var(--warn)">Check date</span>') +
+    '</div></div><div class="amount num">' + money(e.amount) + '<small>' + esc(e.paidBy) + '</small></div></button>';
+}
+function bindRows(container) {
+  $(container).querySelectorAll('[data-exp]').forEach(function (b) { b.addEventListener('click', function () { openExpense(+b.getAttribute('data-exp')); }); });
+  $(container).querySelectorAll('[data-trf]').forEach(function (b) { b.addEventListener('click', function () { openTransfer(+b.getAttribute('data-trf')); }); });
+}
+function renderExpenses() {
+  if (!state.data) return;
+  var list = filteredExpenses();
+  $('expCount').textContent = list.length + ' expense' + (list.length === 1 ? '' : 's');
+  $('expSum').textContent = 'Total ' + money(sum(list.filter(function (e) { return e.dateValid; })));
+  $('expList').innerHTML = list.length ? list.map(expenseRow).join('') : '<div class="empty">No expenses match these filters.</div>';
+  bindRows('expList');
+}
+
+/* ===================================================================
+   Transfers list
+   =================================================================== */
+function transferRow(t) {
+  var dir = t.from === 'Me' ? 'Sent' : t.to === 'Me' ? 'Received' : '';
+  return '<button class="row' + (t.dateValid ? '' : ' bad') + '" data-trf="' + t.id + '" style="--k:' + (dir === 'Received' ? 'var(--c2)' : 'var(--c3)') + '"><div class="cat-ico">' + (dir === 'Received' ? '📥' : '📤') + '</div>' +
+    '<div class="main"><div class="title">' + esc((t.purpose || 'Transfer') + (t.reference && !t.purpose ? ' · ' + t.reference : '')) + '</div><div class="meta">' +
+    '<span class="chip">📅 ' + esc(t.dateValid ? shortDate(t.date) : t.date) + '</span>' +
+    '<span class="chip">' + esc(t.from) + ' → ' + esc(t.to) + '</span>' + (t.reference ? '<span class="chip">' + esc(t.reference) + '</span>' : '') +
+    (t.receiptId ? '<span class="chip">🧾 Proof</span>' : '') + '</div></div><div class="amount num" style="color:' + (dir === 'Received' ? 'var(--good)' : 'inherit') + '">' +
+    (dir === 'Received' ? '+' : '') + money(t.amount) + '<small>' + dir + '</small></div></button>';
+}
+function renderTransfers() {
+  var list = state.data.transfers.slice().sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
+  var valid = list.filter(function (t) { return t.dateValid; });
+  var sent = valid.filter(function (t) { return t.from === 'Me'; }), rec = valid.filter(function (t) { return t.to === 'Me'; });
+  var kpi = function (l, v, s, c, i) { return '<div class="card kpi" style="--k:' + c + '"><div class="k-ico">' + i + '</div><div class="label">' + l + '</div><div class="value num">' + v + '</div><div class="sub">' + s + '</div></div>'; };
+  $('trfKpis').innerHTML = kpi('Sent by me', money(sum(sent)), sent.length + ' transfers', 'var(--c3)', '📤') + kpi('Received by me', money(sum(rec)), rec.length + ' transfers', 'var(--c2)', '📥') +
+    kpi('Net', money(sum(rec) - sum(sent)), 'Received − sent', 'var(--c8)', '⚖️') + kpi('All transfers', valid.length, 'All time', 'var(--c6)', '🔁');
+  $('trfList').innerHTML = list.length ? list.map(transferRow).join('') : '<div class="empty">No transfers recorded yet.</div>';
+  bindRows('trfList');
+}
+
+/* ===================================================================
+   Modal helpers
+   =================================================================== */
+function openModal(html, narrow) {
+  var m = $('modal');
+  m.innerHTML = '<div class="sheet' + (narrow ? ' narrow' : '') + '" role="dialog" aria-modal="true">' + html + '</div>';
+  m.hidden = false; document.body.style.overflow = 'hidden';
+  m.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', cancelModal); });
+}
+function closeModal() { state.attach = null; $('modal').hidden = true; $('modal').innerHTML = ''; document.body.style.overflow = ''; }
+function cancelModal() {
+  // An uploaded receipt that was never saved is moved to the Drive trash.
+  var u = state.upload;
+  if (u && u.receiptId && !u.saved) authed('discardReceipt', u.receiptId, u.previewId).catch(function () {});
+  state.upload = null; closeModal();
+}
+$('modal').addEventListener('click', function (e) { if (e.target === $('modal')) cancelModal(); });
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if (!$('zoom').hidden) { $('zoom').hidden = true; return; }
+  if (!$('modal').hidden) cancelModal();
+});
+function head(title) { return '<div class="sheet-head"><h3>' + esc(title) + '</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>'; }
+function zoomImage(src) { $('zoomImg').src = src; $('zoom').hidden = false; }
+$('zoomClose').addEventListener('click', function () { $('zoom').hidden = true; });
+
+/* ===================================================================
+   Add: choose source → upload/OCR → review form
+   =================================================================== */
+document.addEventListener('click', function (e) {
+  var a = e.target.closest('[data-action]'); if (!a) return;
+  var act = a.getAttribute('data-action');
+  if (act === 'add-expense') chooseSource('expense');
+  if (act === 'add-transfer') chooseSource('transfer');
+});
+function chooseSource(kind) {
+  state.addKind = kind;
+  var cam = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var up = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>';
+  var pen = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  openModal(head(kind === 'expense' ? 'Add an expense' : 'Add a money transfer') +
+    '<div class="sheet-body"><div class="choices">' +
+    '<button class="choice" id="chCam" style="--k:var(--c1)"><span class="ch-ico">' + cam + '</span>Take a photo<small>Use the phone camera</small></button>' +
+    '<button class="choice" id="chUp" style="--k:var(--c6)"><span class="ch-ico">' + up + '</span>Upload a file<small>Image or PDF</small></button>' +
+    '<button class="choice" id="chMan" style="--k:var(--c4)"><span class="ch-ico">' + pen + '</span>Enter manually<small>' + (kind === 'expense' ? 'No receipt' : 'No screenshot') + '</small></button>' +
+    '</div><p class="muted" style="font-size:13px;margin:14px 2px 0">The receipt is read automatically. You check the details before anything is saved. The original file is kept unchanged in your Google Drive.</p></div>', true);
+  $('chCam').onclick = function () { state.attach = null; $('camInput').value = ''; $('camInput').click(); };
+  $('chUp').onclick = function () { state.attach = null; $('fileInput').value = ''; $('fileInput').click(); };
+  $('chMan').onclick = function () { state.upload = null; kind === 'expense' ? expenseForm(null, null) : transferForm(null, null); };
+}
+function onPicked(file) { if (state.attach) state.attach(file); else handleFile(file); }
+$('camInput').addEventListener('change', function () { if (this.files[0]) onPicked(this.files[0]); });
+$('fileInput').addEventListener('change', function () { if (this.files[0]) onPicked(this.files[0]); });
+
+function readAsBase64(file) {
+  return new Promise(function (res, rej) {
+    var r = new FileReader();
+    r.onload = function () { res(String(r.result).split(',')[1]); };
+    r.onerror = function () { rej(new Error('Could not read the file.')); };
+    r.readAsDataURL(file);
+  });
+}
+/** Smaller JPEG copy for fast viewing and for the PDF report. The original is uploaded untouched. */
+function makePreview(file) {
+  if (!/^image\//.test(file.type)) return Promise.resolve('');
+  return new Promise(function (res) {
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      var max = 1800, w = img.naturalWidth, h = img.naturalHeight, s = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
+      var ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); res(''); };
+    img.src = url;
+  });
+}
+function handleFile(file) {
+  if (file.size > 20 * 1024 * 1024) { toast('The file is larger than 20 MB.', true); return; }
+  var kind = state.addKind;
+  openModal(head('Reading the receipt…') + '<div class="sheet-body"><div class="loading"><div class="spinner"></div><p>Uploading and reading the text. This takes about 5–15 seconds.</p></div></div>', true);
+  Promise.all([readAsBase64(file), makePreview(file)]).then(function (r) {
+    return authed('uploadReceipt', { name: file.name, mimeType: file.type || 'application/octet-stream', data: r[0], previewData: r[1] }).then(function (res) {
+      res.previewSrc = r[1] ? 'data:image/jpeg;base64,' + r[1] : '';
+      state.upload = res;
+      kind === 'expense' ? expenseForm(null, res) : transferForm(null, res);
+    });
+  }).catch(function (e) { closeModal(); toast(e.message, true); });
+}
+
+/* ===================================================================
+   Expense form (add / edit)
+   =================================================================== */
+function itemsToText(items) { return (items || []).map(function (i) { return i.name + ' | ' + (i.price != null ? Number(i.price).toFixed(2) : ''); }).join('\n'); }
+function textToItems(t) {
+  return String(t || '').split('\n').map(function (l) {
+    var p = l.split('|'); var price = parseFloat(String(p[1] || '').replace(/[$,]/g, ''));
+    return { name: p[0].trim(), price: isNaN(price) ? null : price };
+  }).filter(function (i) { return i.name; });
+}
+function receiptPane(src, upload, existing) {
+  if (src) return '<div class="receipt-view"><img src="' + src + '" alt="Receipt" id="rcptImg"></div>';
+  if (upload && upload.mimeType === 'application/pdf') return '<div class="receipt-view"><div class="ph">📄 PDF receipt uploaded.<br>It is saved in your Drive and attached to this entry.</div></div>';
+  if (upload) return '<div class="receipt-view"><div class="ph">🧾 Receipt uploaded and saved in your Drive.<br><small>A preview is not available for this file type.</small></div></div>';
+  if (existing) return '<div class="receipt-view" id="rcptHolder"><div class="ph"><div class="spinner"></div></div></div>';
+  return '<div class="receipt-view"><div class="ph">No receipt attached.<br><small>You can add one with the buttons below.</small></div></div>';
+}
+function attachButtons(hasReceipt) {
+  return '<div class="rc-label edit-only" id="rcLabel">' + (hasReceipt ? 'Replace the receipt' : 'Attach a receipt') + '</div>' +
+    '<div class="rc-actions edit-only"><button type="button" class="btn small" id="rcCam">📷 Take photo</button><button type="button" class="btn small" id="rcUp">📎 Upload image / PDF</button></div>';
+}
+/** Wires the photo/upload buttons of an open form. onAttached(res) gets the uploaded receipt and what was read from it. */
+function wireAttach(onAttached) {
+  var pick = function (input) {
+    state.attach = function (file) {
+      if (file.size > 20 * 1024 * 1024) { toast('The file is larger than 20 MB.', true); return; }
+      var box = $('rcptBox'); if (!box) return;
+      box.innerHTML = '<div class="receipt-view"><div class="ph"><div class="spinner"></div><p>Uploading and reading the receipt…</p></div></div>';
+      $('rcCam').disabled = $('rcUp').disabled = true;
+      Promise.all([readAsBase64(file), makePreview(file)]).then(function (r) {
+        return authed('uploadReceipt', { name: file.name, mimeType: file.type || 'application/octet-stream', data: r[0], previewData: r[1] }).then(function (res) {
+          res.previewSrc = r[1] ? 'data:image/jpeg;base64,' + r[1] : '';
+          // a receipt picked earlier in this same form and not saved yet goes to the Drive trash
+          var prev = state.upload;
+          if (prev && prev.receiptId && !prev.saved) authed('discardReceipt', prev.receiptId, prev.previewId).catch(function () {});
+          state.upload = res;
+          if (!$('rcptBox')) return;
+          $('rcptBox').innerHTML = receiptPane(res.previewSrc, res, false) +
+            (res.text ? '<details class="raw mt"><summary>Text read from the receipt</summary><pre>' + esc(res.text) + '</pre></details>' : '');
+          if ($('rcptImg')) $('rcptImg').onclick = function () { zoomImage(this.src); };
+          $('rcLabel').textContent = 'Replace the receipt';
+          onAttached(res);
+          toast(res.ocrError ? 'Receipt attached. It could not be read automatically.' : 'Receipt attached. Press Save to keep it.');
+        });
+      }).catch(function (e) {
+        if ($('rcptBox')) $('rcptBox').innerHTML = '<div class="receipt-view"><div class="ph">Upload failed. Try again.</div></div>';
+        toast(e.message, true);
+      }).then(function () { if ($('rcCam')) $('rcCam').disabled = $('rcUp').disabled = false; });
+    };
+    input.value = ''; input.click();
+  };
+  $('rcCam').onclick = function () { pick($('camInput')); };
+  $('rcUp').onclick = function () { pick($('fileInput')); };
+}
+function fillIfEmpty(id, value) { var el = $(id); if (el && !String(el.value).trim() && value !== undefined && value !== null && value !== '') el.value = value; }
+function expenseForm(existing, upload) {
+  var L = state.data.lists, p = (upload && upload.parsed) || {}, e = existing || {};
+  var val = function (k, fallback) { return existing ? (e[k] || '') : (fallback || ''); };
+  var items = existing ? textToItems(e.items) : (p.items || []);
+  var desc = existing ? e.description : (p.store ? p.store + (items.length ? ' – ' + items.slice(0, 3).map(function (i) { return i.name; }).join(', ') : '') : '');
+  var note = '';
+  if (upload) {
+    note = upload.ocrError ? '<div class="ocr-note err">' + esc(upload.ocrError) + '</div>' :
+      '<div class="ocr-note">✓ Receipt read. Please check every field. The amounts and dates you save are the ones that will appear in the court report.</div>';
+  }
+  var src = upload ? upload.previewSrc : '';
+  var lastChild = localPref('cet_lastChild') || '';
+  openModal(head(existing ? 'Edit expense' : 'Review expense') +
+    '<div class="sheet-body"><div class="split"><div><div id="rcptBox">' + receiptPane(src, upload, existing && (e.receiptId)) + '</div>' + attachButtons(!!(existing ? e.receiptId : upload)) +
+    (upload && upload.text ? '<details class="raw mt"><summary>Text read from the receipt</summary><pre>' + esc(upload.text) + '</pre></details>' : '') +
+    '</div><div>' + note +
+    '<div class="form">' +
+    '<div class="field"><label>Date <span class="req">*</span></label><input type="date" id="xDate" value="' + esc(val('date', p.date || today())) + '"></div>' +
+    '<div class="field"><label>Amount ($) <span class="req">*</span></label><input type="number" step="0.01" min="0" inputmode="decimal" id="xAmount" value="' + esc(existing ? e.amount : (p.total != null ? p.total : '')) + '"></div>' +
+    '<div class="field"><label>Child <span class="req">*</span></label><select id="xChild">' + optionList(L.children, val('child', lastChild), 'Choose…') + '</select></div>' +
+    '<div class="field"><label>Category <span class="req">*</span></label><select id="xCategory">' + optionList(L.categories, val('category', p.category), 'Choose…') + '</select></div>' +
+    '<div class="field full"><label>Description <span class="req">*</span></label><input type="text" id="xDesc" value="' + esc(desc) + '" placeholder="e.g. Winter boots for Yousuf"></div>' +
+    '<div class="field full"><label>Store / Location</label><input type="text" id="xStore" value="' + esc(existing ? e.store : [p.store, p.address].filter(Boolean).join(', ')) + '"></div>' +
+    '<div class="field"><label>Payment method</label><select id="xPay">' + optionList(L.paymentMethods, val('payment', p.payment), '—') + '</select></div>' +
+    '<div class="field"><label>Paid by</label><select id="xPaid">' + optionList(L.paidBy, val('paidBy', 'Me')) + '</select></div>' +
+    '<div class="field full"><label>Items on the receipt</label><div class="items-editor" id="xItems"></div><button class="btn small mt" type="button" id="xAddItem">+ Add item</button></div>' +
+    '<div class="field full"><label>Notes</label><textarea id="xNotes" placeholder="Why it was bought, who was there…">' + esc(val('notes')) + '</textarea></div>' +
+    '</div></div></div></div>' +
+    '<div class="sheet-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="xSave">' + (existing ? 'Save changes' : 'Save expense') + '</button></div>');
+
+  var drawItems = function (list) {
+    $('xItems').innerHTML = list.map(function (i, n) {
+      return '<div class="item-line"><input type="text" value="' + esc(i.name) + '" placeholder="Item" data-i="' + n + '" data-f="name"><input type="number" step="0.01" value="' + (i.price != null ? i.price : '') + '" placeholder="Price" data-i="' + n + '" data-f="price"><button type="button" data-rm="' + n + '" aria-label="Remove">✕</button></div>';
+    }).join('');
+    $('xItems').querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = function () { items.splice(+b.getAttribute('data-rm'), 1); drawItems(items); }; });
+    $('xItems').querySelectorAll('input').forEach(function (inp) {
+      inp.oninput = function () { var it = items[+inp.getAttribute('data-i')]; if (inp.getAttribute('data-f') === 'name') it.name = inp.value; else it.price = inp.value === '' ? null : parseFloat(inp.value); };
+    });
+  };
+  drawItems(items);
+  $('xAddItem').onclick = function () { items.push({ name: '', price: null }); drawItems(items); };
+  if ($('rcptImg')) $('rcptImg').onclick = function () { zoomImage(this.src); };
+  if (existing && e.receiptId) loadReceiptInto('rcptHolder', e);
+  var rc = { id: existing ? e.receiptId : (upload ? upload.receiptId : ''), pid: existing ? e.previewId : (upload ? upload.previewId : '') };
+  wireAttach(function (res) {
+    rc.id = res.receiptId; rc.pid = res.previewId;
+    var p2 = res.parsed || {};
+    fillIfEmpty('xAmount', p2.total); fillIfEmpty('xStore', [p2.store, p2.address].filter(Boolean).join(', '));
+    fillIfEmpty('xPay', p2.payment); fillIfEmpty('xCategory', p2.category);
+    if (!items.some(function (i) { return i.name.trim(); }) && p2.items && p2.items.length) { items = p2.items.slice(); drawItems(items); }
+  });
+
+  $('xSave').onclick = function () {
+    var btn = this;
+    var data = {
+      id: existing ? e.id : null,
+      expected: existing ? { date: e.date, amount: e.amount } : null,
+      date: $('xDate').value, amount: $('xAmount').value, child: $('xChild').value, category: $('xCategory').value,
+      description: $('xDesc').value.trim(), store: $('xStore').value.trim(), payment: $('xPay').value, paidBy: $('xPaid').value,
+      notes: $('xNotes').value.trim(), items: itemsToText(items.filter(function (i) { return i.name.trim(); })),
+      receiptId: rc.id || '',
+      previewId: rc.pid || ''
+    };
+    if (!data.date || !data.amount || !data.child || !data.category || !data.description) { toast('Please fill in Date, Amount, Child, Category and Description.', true); return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    authed('saveExpense', data).then(function (saved) {
+      if (state.upload) state.upload.saved = true;
+      state.upload = null; localPref('cet_lastChild', data.child);
+      var list = state.data.expenses, i = list.findIndex(function (x) { return x.id === saved.id; });
+      if (i >= 0) list[i] = saved; else list.push(saved);
+      closeModal(); toast(existing ? 'Changes saved.' : 'Expense saved.'); render();
+    }).catch(function (err) { btn.disabled = false; btn.textContent = existing ? 'Save changes' : 'Save expense'; toast(err.message, true); });
+  };
+}
+
+function loadReceiptInto(holderId, entry) {
+  authed('getReceipt', entry.receiptId, entry.previewId).then(function (r) {
+    var h = $(holderId); if (!h) return;
+    if (r.dataUrl) {
+      h.innerHTML = '<img src="' + r.dataUrl + '" alt="Receipt">';
+      h.querySelector('img').onclick = function () { zoomImage(r.dataUrl); };
+    } else h.innerHTML = '<div class="ph">📄 ' + esc(r.originalName || 'Receipt file') + '</div>';
+    var meta = $(holderId + 'Meta');
+    if (meta) meta.innerHTML = (r.originalUrl ? '<a class="btn small" target="_blank" rel="noopener" href="' + esc(r.originalUrl) + '">Open original file</a>' : '') +
+      (r.uploaded ? '<div class="muted" style="font-size:12.5px;margin-top:8px">Uploaded ' + esc(r.uploaded) + (r.fingerprint ? '<br>File fingerprint (SHA-256): <span style="word-break:break-all">' + esc(r.fingerprint.slice(0, 16)) + '…</span>' : '') + '</div>' : '');
+  }).catch(function () { var h = $(holderId); if (h) h.innerHTML = '<div class="ph">Could not load the receipt.</div>'; });
+}
+
+/* ===================================================================
+   Expense details
+   =================================================================== */
+function openExpense(id) {
+  var e = state.data.expenses.find(function (x) { return x.id === id; }); if (!e) return;
+  var items = textToItems(e.items);
+  var linkOnly = !e.receiptId && e.receiptLink;
+  openModal(head('Expense details') +
+    '<div class="sheet-body"><div class="split"><div>' +
+    (e.receiptId ? '<div class="receipt-view" id="dHolder"><div class="ph"><div class="spinner"></div><p>Loading receipt…</p></div></div><div id="dHolderMeta" class="mt"></div>' :
+      linkOnly ? '<div class="receipt-view"><div class="ph">Receipt link saved in the sheet.<br><a class="btn small mt" target="_blank" rel="noopener" href="' + esc(e.receiptLink) + '">Open receipt link</a></div></div>' :
+      '<div class="receipt-view"><div class="ph">No receipt attached.</div></div>') +
+    '</div><div>' +
+    '<div class="muted">' + esc(e.dateValid ? new Date(e.date + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Date needs checking: ' + e.date) + '</div>' +
+    '<div class="big-amount num">' + money(e.amount) + '</div>' +
+    '<h3 style="margin:0 0 12px;font-size:18px">' + esc(e.description) + '</h3>' +
+    '<dl class="kv">' +
+    '<dt>Child</dt><dd>' + esc(e.child) + '</dd>' +
+    '<dt>Category</dt><dd><span class="chip"><span class="dot" style="background:' + catColor(e.category) + '"></span>' + esc(e.category) + '</span></dd>' +
+    '<dt>Store / Location</dt><dd>' + esc(e.store || '—') + '</dd>' +
+    '<dt>Payment method</dt><dd>' + esc(e.payment || '—') + '</dd>' +
+    '<dt>Paid by</dt><dd>' + esc(e.paidBy || '—') + '</dd>' +
+    (e.addedOn ? '<dt>Added on</dt><dd>' + esc(e.addedOn) + '</dd>' : '') +
+    (e.editedOn ? '<dt>Last edited</dt><dd>' + esc(e.editedOn) + '</dd>' : '') +
+    '<dt>Sheet row</dt><dd>' + e.id + '</dd>' +
+    '</dl>' +
+    (items.length ? '<div class="section-title">Items</div><table class="items">' + items.map(function (i) { return '<tr><td>' + esc(i.name) + '</td><td class="num">' + (i.price != null ? money(i.price) : '') + '</td></tr>'; }).join('') + '</table>' : '') +
+    (e.notes ? '<div class="section-title">Notes</div><div style="white-space:pre-wrap">' + esc(e.notes) + '</div>' : '') +
+    '</div></div></div>' +
+    '<div class="sheet-foot"><button class="btn danger edit-only" id="dDel">Delete</button><button class="btn edit-only" id="dEdit">Edit</button><button class="btn primary" data-close>Close</button></div>');
+  if (e.receiptId) loadReceiptInto('dHolder', e);
+  $('dEdit').onclick = function () { expenseForm(e, null); };
+  $('dDel').onclick = function () {
+    if (!confirm('Delete this expense (' + money(e.amount) + ' on ' + e.date + ')?\n\nThe receipt file stays in your Drive and the deleted row is kept in the Audit Log sheet.')) return;
+    authed('deleteExpense', e.id, { date: e.date, amount: e.amount }).then(function () { closeModal(); toast('Expense deleted.'); return reload(); })
+      .catch(function (err) { toast(err.message, true); });
+  };
+}
+
+/* ===================================================================
+   Transfer form & details
+   =================================================================== */
+function transferForm(existing, upload) {
+  var L = state.data.lists, p = (upload && upload.parsed) || {}, t = existing || {};
+  var val = function (k, fb) { return existing ? (t[k] || '') : (fb || ''); };
+  openModal(head(existing ? 'Edit transfer' : 'Review transfer') +
+    '<div class="sheet-body"><div class="split"><div><div id="rcptBox">' + receiptPane(upload ? upload.previewSrc : '', upload, existing && t.receiptId) + '</div>' + attachButtons(!!(existing ? t.receiptId : upload)) + '</div><div>' +
+    (upload ? (upload.ocrError ? '<div class="ocr-note err">' + esc(upload.ocrError) + '</div>' : '<div class="ocr-note">✓ Screenshot read. Please check the details.</div>') : '') +
+    '<div class="form">' +
+    '<div class="field"><label>Date <span class="req">*</span></label><input type="date" id="tDate" value="' + esc(val('date', p.date || today())) + '"></div>' +
+    '<div class="field"><label>Amount ($) <span class="req">*</span></label><input type="number" step="0.01" min="0" inputmode="decimal" id="tAmount" value="' + esc(existing ? t.amount : (p.total != null ? p.total : '')) + '"></div>' +
+    '<div class="field"><label>From <span class="req">*</span></label><select id="tFrom">' + optionList(L.parties, val('from', 'Me')) + '</select></div>' +
+    '<div class="field"><label>To <span class="req">*</span></label><select id="tTo">' + optionList(L.parties, val('to', 'Ex-spouse')) + '</select></div>' +
+    '<div class="field"><label>Purpose</label><select id="tPurpose">' + optionList(L.purposes, val('purpose'), '—') + '</select></div>' +
+    '<div class="field"><label>Reference / Confirmation #</label><input type="text" id="tRef" value="' + esc(val('reference', p.reference)) + '"></div>' +
+    '<div class="field full"><label>Notes</label><textarea id="tNotes">' + esc(val('notes')) + '</textarea></div>' +
+    '</div></div></div></div>' +
+    '<div class="sheet-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tSave">' + (existing ? 'Save changes' : 'Save transfer') + '</button></div>');
+  if (existing && t.receiptId) loadReceiptInto('rcptHolder', t);
+  var rc = { id: existing ? t.receiptId : (upload ? upload.receiptId : ''), pid: existing ? t.previewId : (upload ? upload.previewId : '') };
+  wireAttach(function (res) {
+    rc.id = res.receiptId; rc.pid = res.previewId;
+    var p2 = res.parsed || {};
+    fillIfEmpty('tAmount', p2.total); fillIfEmpty('tRef', p2.reference);
+  });
+  if ($('rcptImg')) $('rcptImg').onclick = function () { zoomImage(this.src); };
+  $('tSave').onclick = function () {
+    var btn = this;
+    var data = {
+      id: existing ? t.id : null, expected: existing ? { date: t.date, amount: t.amount } : null,
+      date: $('tDate').value, amount: $('tAmount').value, from: $('tFrom').value, to: $('tTo').value,
+      purpose: $('tPurpose').value, reference: $('tRef').value.trim(), notes: $('tNotes').value.trim(),
+      receiptId: rc.id || '', previewId: rc.pid || ''
+    };
+    if (!data.date || !data.amount) { toast('Please fill in Date and Amount.', true); return; }
+    if (data.from === data.to) { toast('From and To must be different.', true); return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    authed('saveTransfer', data).then(function (saved) {
+      if (state.upload) state.upload.saved = true; state.upload = null;
+      var list = state.data.transfers, i = list.findIndex(function (x) { return x.id === saved.id; });
+      if (i >= 0) list[i] = saved; else list.push(saved);
+      closeModal(); toast(existing ? 'Changes saved.' : 'Transfer saved.'); render();
+    }).catch(function (err) { btn.disabled = false; btn.textContent = existing ? 'Save changes' : 'Save transfer'; toast(err.message, true); });
+  };
+}
+function openTransfer(id) {
+  var t = state.data.transfers.find(function (x) { return x.id === id; }); if (!t) return;
+  openModal(head('Transfer details') +
+    '<div class="sheet-body"><div class="split"><div>' +
+    (t.receiptId ? '<div class="receipt-view" id="tdHolder"><div class="ph"><div class="spinner"></div></div></div><div id="tdHolderMeta" class="mt"></div>' : '<div class="receipt-view"><div class="ph">No screenshot attached.</div></div>') +
+    '</div><div><div class="muted">' + esc(t.date) + '</div><div class="big-amount num">' + money(t.amount) + '</div>' +
+    '<dl class="kv"><dt>From</dt><dd>' + esc(t.from) + '</dd><dt>To</dt><dd>' + esc(t.to) + '</dd><dt>Purpose</dt><dd>' + esc(t.purpose || '—') + '</dd>' +
+    '<dt>Reference</dt><dd>' + esc(t.reference || '—') + '</dd><dt>Notes</dt><dd style="white-space:pre-wrap">' + esc(t.notes || '—') + '</dd><dt>Sheet row</dt><dd>' + t.id + '</dd></dl>' +
+    '</div></div></div><div class="sheet-foot"><button class="btn danger edit-only" id="tdDel">Delete</button><button class="btn edit-only" id="tdEdit">Edit</button><button class="btn primary" data-close>Close</button></div>');
+  if (t.receiptId) loadReceiptInto('tdHolder', t);
+  $('tdEdit').onclick = function () { transferForm(t, null); };
+  $('tdDel').onclick = function () {
+    if (!confirm('Delete this transfer (' + money(t.amount) + ' on ' + t.date + ')?\n\nThe deleted row is kept in the Audit Log sheet.')) return;
+    authed('deleteTransfer', t.id, { date: t.date, amount: t.amount }).then(function () { closeModal(); toast('Transfer deleted.'); return reload(); })
+      .catch(function (err) { toast(err.message, true); });
+  };
+}
+
+/* ===================================================================
+   Reports
+   =================================================================== */
+function setupReports() {
+  var L = state.data.lists;
+  var mk = function (el, values) {
+    var prev = {}; $(el).querySelectorAll('input').forEach(function (i) { prev[i.value] = i.checked; });
+    $(el).innerHTML = values.map(function (v) { return '<label><input type="checkbox" value="' + esc(v) + '"' + (prev[v] === false ? '' : ' checked') + '> ' + esc(v) + '</label>'; }).join('');
+  };
+  mk('rChildren', L.children); mk('rCategories', L.categories);
+  if (!$('rFrom').value) { $('rFrom').value = today().slice(0, 4) + '-01-01'; $('rTo').value = today(); }
+  var by = localPref('cet_preparedBy'); if (by && !$('rBy').value) $('rBy').value = by;
+  var y = +today().slice(0, 4), m = +today().slice(5, 7);
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var last = function (yy, mm) { return new Date(yy, mm, 0).getDate(); };
+  var pm = m === 1 ? 12 : m - 1, py = m === 1 ? y - 1 : y;
+  var ranges = [
+    ['This month', y + '-' + pad(m) + '-01', today()],
+    ['Last month', py + '-' + pad(pm) + '-01', py + '-' + pad(pm) + '-' + last(py, pm)],
+    ['Last 3 months', (m > 3 ? y : y - 1) + '-' + pad(((m + 8) % 12) + 1) + '-01', today()],
+    ['This year', y + '-01-01', today()],
+    ['Last year', (y - 1) + '-01-01', (y - 1) + '-12-31']
+  ];
+  $('quickRanges').innerHTML = ranges.map(function (r, i) { return '<button class="btn small" data-r="' + i + '">' + r[0] + '</button>'; }).join('');
+  $('quickRanges').querySelectorAll('[data-r]').forEach(function (b) { b.onclick = function () { var r = ranges[+b.getAttribute('data-r')]; $('rFrom').value = r[1]; $('rTo').value = r[2]; renderReportPreview(); }; });
+}
+function reportOptions() {
+  var checked = function (el) { return Array.prototype.map.call($(el).querySelectorAll('input:checked'), function (i) { return i.value; }); };
+  return { from: $('rFrom').value, to: $('rTo').value, children: checked('rChildren'), categories: checked('rCategories'),
+    includeTransfers: $('rTransfers').checked, includeReceipts: $('rReceipts').checked, preparedBy: $('rBy').value.trim(), title: $('rTitle').value.trim() };
+}
+function reportRows(o) {
+  return validExpenses().filter(function (e) {
+    return e.date >= o.from && e.date <= o.to && o.children.indexOf(e.child) >= 0 && o.categories.indexOf(e.category) >= 0;
+  }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+}
+['rFrom', 'rTo', 'rTransfers', 'rReceipts'].forEach(function (id) { document.getElementById(id).addEventListener('change', function () { renderReportPreview(); }); });
+['rChildren', 'rCategories'].forEach(function (id) { document.getElementById(id).addEventListener('change', function () { renderReportPreview(); }); });
+function renderReportPreview() {
+  if (!state.data) return;
+  var o = reportOptions();
+  if (!o.from || !o.to || o.from > o.to) { $('rPreview').innerHTML = '<div class="muted">Choose a valid period.</div>'; return; }
+  var rows = reportRows(o);
+  var trf = validTransfers().filter(function (t) { return t.date >= o.from && t.date <= o.to; });
+  var receipts = rows.filter(function (e) { return e.receiptId; }).length;
+  $('rPreview').innerHTML = '<dl class="kv">' +
+    '<dt>Expenses</dt><dd class="num">' + rows.length + ' · <b>' + money(sum(rows)) + '</b></dd>' +
+    '<dt>Paid by me</dt><dd class="num">' + money(sum(rows.filter(function (e) { return e.paidBy === 'Me'; }))) + '</dd>' +
+    '<dt>Receipts attached</dt><dd>' + receipts + ' of ' + rows.length + '</dd>' +
+    (o.includeTransfers ? '<dt>Transfers</dt><dd class="num">' + trf.length + ' · ' + money(sum(trf)) + '</dd>' : '') +
+    '</dl>' + (rows.length && receipts < rows.length ? '<p class="muted" style="font-size:13px">Expenses without a receipt still appear in the report table, marked “—”.</p>' : '');
+}
+$('rGenerate').addEventListener('click', function () {
+  var o = reportOptions(), btn = this;
+  if (!o.from || !o.to || o.from > o.to) { toast('Choose a valid period.', true); return; }
+  if (!reportRows(o).length) { toast('No expenses in this period with these filters.', true); return; }
+  localPref('cet_preparedBy', o.preparedBy);
+  btn.disabled = true; btn.textContent = 'Creating PDF…';
+  $('rResult').innerHTML = '<div class="loading" style="padding:16px"><div class="spinner"></div><p>Building the report. With many receipts this can take up to a minute.</p></div>';
+  authed('generateReport', o).then(function (r) {
+    var dl = r.data ? '<a class="btn primary" download="' + esc(r.name) + '" href="data:application/pdf;base64,' + r.data + '">Download PDF</a>' : '';
+    $('rResult').innerHTML = '<div class="ocr-note">✓ Report ready (' + r.sizeKb + ' KB). A copy is saved in your Reports folder in Drive.</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + dl +
+      '<a class="btn" target="_blank" rel="noopener" href="' + esc(r.url) + '">Open in Google Drive</a></div>';
+  }).catch(function (e) { $('rResult').innerHTML = ''; toast(e.message, true); })
+    .then(function () { btn.disabled = false; btn.textContent = 'Generate PDF report'; });
+});
+$('rCsv').addEventListener('click', function () {
+  var o = reportOptions(), rows = reportRows(o);
+  if (!rows.length) { toast('No expenses in this period.', true); return; }
+  var q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  var lines = [['Date', 'Child', 'Category', 'Description', 'Store / Location', 'Payment Method', 'Paid By', 'Amount', 'Notes', 'Receipt Link'].join(',')];
+  rows.forEach(function (e) { lines.push([e.date, e.child, e.category, e.description, e.store, e.payment, e.paidBy, e.amount.toFixed(2), e.notes, e.receiptLink].map(q).join(',')); });
+  var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'children-expenses_' + o.from + '_to_' + o.to + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ===================================================================
+   Settings
+   =================================================================== */
+$('sChange').addEventListener('click', function () {
+  authed('changePassword', $('sOld').value, $('sNew').value).then(function () { $('sOld').value = ''; $('sNew').value = ''; toast('Password updated.'); })
+    .catch(function (e) { toast(e.message, true); });
+});
+$('sLock').addEventListener('click', function () { lockApp(); });
+$('lockBtn').addEventListener('click', function () { lockApp(); });
+$('sReload').addEventListener('click', function () { reload().then(function () { toast('Data reloaded.'); }); });
+$('dashPeriod').addEventListener('change', renderDashboard);
+
+/* ===================================================================
+   Start
+   =================================================================== */
+setupLogin(); buildTabs();
+setTimeout(function () { api('getAuthState').then(function (s) {
+  if (!s.ready) { $('lockMsg').textContent = 'Accounts are not set up yet.'; return; }
+  if (state.token) openApp(); else $('lUser').focus();
+}).catch(function (e) { $('lockMsg').textContent = e.message; }); }, 0);
+
+/* ===================================================================
+   Demo data — used ONLY when this file is opened outside Google Apps Script
+   (for previewing the design). It never runs inside the real app.
+   =================================================================== */
+var DemoApi = (function () {
+  var wait = function (v, ms) { return new Promise(function (r) { setTimeout(function () { r(v); }, ms || 250); }); };
+  var lists = { children: ['Child A', 'Child B', 'Both', 'Other'], categories: ['Clothing', 'Medical', 'School', 'Activities', 'Childcare', 'Food/Groceries', 'Transportation', 'Gifts', 'Other'],
+    paymentMethods: ['Cash', 'Debit', 'Credit Card', 'E-transfer', 'Other'], paidBy: ['Me', 'Ex-spouse', 'Other'], parties: ['Me', 'Ex-spouse'], purposes: ['Child Support', 'Reimbursement', 'Shared Expense', 'Gift', 'Other'] };
+  var sample = [
+    ['2026-09-08', 'Child A', 'School', 'School supplies', 'Staples', 64.2, 'Debit'], ['2026-09-15', 'Child A', 'Activities', 'Soccer program (monthly)', 'Community club', 120, 'E-transfer'],
+    ['2026-09-22', 'Child A', 'Clothing', 'Indoor shoes and sports jersey', 'Sport store', 42.28, 'Debit'], ['2026-09-29', 'Both', 'Food/Groceries', 'Lunch', 'Restaurant', 14.42, 'Debit'],
+    ['2026-10-03', 'Child B', 'Gifts', 'Birthday gift and playground', 'Toy store', 100, 'E-transfer'], ['2026-10-06', 'Both', 'Clothing', 'Kids winter boots', 'Shoe store', 129.42, 'Debit'],
+    ['2026-10-20', 'Both', 'Medical', 'Vitamins', 'Pharmacy', 50.83, 'Debit'], ['2026-10-27', 'Both', 'Clothing', 'Winter jackets', 'Department store', 126.81, 'Debit'],
+    ['2026-11-04', 'Child B', 'Medical', 'Nasal spray', 'Pharmacy', 22, 'E-transfer'], ['2026-11-09', 'Both', 'Transportation', 'Ride to school', 'Rideshare', 17.53, 'Debit']
+  ];
+  var expenses = sample.map(function (s, i) { return { id: i + 2, date: s[0], dateValid: true, child: s[1], category: s[2], description: s[3], store: s[4], amount: s[5], payment: s[6], paidBy: 'Me', notes: '', items: '', receiptId: i % 3 === 0 ? 'demo' + i : '', previewId: '', receiptLink: '', addedOn: s[0] + ' 18:00', editedOn: '' }; });
+  expenses.push({ id: 13, date: '20226-11-03', dateValid: false, child: 'Child B', category: 'Clothing', description: 'Clothes for photo day', store: '', amount: 51.42, payment: 'Debit', paidBy: 'Me', notes: '', items: '', receiptId: '', previewId: '', receiptLink: '', addedOn: '', editedOn: '' });
+  var transfers = [
+    { id: 2, date: '2026-10-01', dateValid: true, from: 'Me', to: 'Ex-spouse', amount: 600, purpose: 'Child Support', reference: 'CS-OCT', notes: '', receiptId: '', previewId: '' },
+    { id: 3, date: '2026-09-26', dateValid: true, from: 'Me', to: 'Ex-spouse', amount: 40, purpose: 'Other', reference: '', notes: 'For the children', receiptId: '', previewId: '' }
+  ];
+  var nextId = 20, demoRole = 'editor', demoUser = 'father';
+  var receiptSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="560"><rect width="360" height="560" fill="#fff"/><g font-family="monospace" font-size="15" fill="#222"><text x="120" y="50" font-size="20">PHARMACY</text><text x="95" y="74">123 Main St, Toronto ON</text><text x="30" y="120">2026-11-04 14:22</text><text x="30" y="170">Nasal spray</text><text x="270" y="170">19.47</text><text x="30" y="200">HST 13%</text><text x="270" y="200">2.53</text><text x="30" y="250" font-weight="bold">TOTAL</text><text x="270" y="250" font-weight="bold">22.00</text><text x="30" y="290">INTERAC DEBIT</text><text x="110" y="500">THANK YOU</text></g></svg>');
+  return {
+    getAuthState: function () { return wait({ ready: true }); },
+    login: function (u, pw) { u = String(u).toLowerCase(); if (pw === 'demo1234' && (u === 'father' || u === 'mother')) { demoRole = u === 'father' ? 'editor' : 'viewer'; demoUser = u; return wait({ token: 'demo', user: u, role: demoRole }); } return wait(null, 300).then(function () { throw new Error('Demo: father or mother / demo1234'); }); },
+    logout: function () { return wait(true); },
+    getBootstrap: function () { return wait({ user: demoUser, role: demoRole, lists: lists, expenses: expenses, transfers: transfers, today: '2026-11-15', spreadsheetUrl: '#', receiptsFolderUrl: '#', reportsFolderUrl: '#',
+      warnings: ['Expense Log row 15: the date "20226-11-03" looks wrong, so this expense is left out of totals and reports.'] }, 500); },
+    uploadReceipt: function () { return wait({ receiptId: 'new', previewId: '', mimeType: 'image/jpeg', text: 'PHARMACY\n123 Main St, Toronto ON\n2026-11-04 14:22\nNasal spray 19.47\nHST 13% 2.53\nTOTAL 22.00\nINTERAC DEBIT', ocrError: '',
+      parsed: { date: '2026-11-04', store: 'PHARMACY', address: '123 Main St, Toronto ON', total: 22, tax: 2.53, payment: 'Debit', category: 'Medical', items: [{ name: 'Nasal spray', price: 19.47 }], reference: '' } }, 1200); },
+    discardReceipt: function () { return wait(true); },
+    getReceipt: function () { return wait({ dataUrl: receiptSvg, originalUrl: '#', originalName: 'receipt.jpg', uploaded: '2026-11-04 18:02', fingerprint: '9f2c4e1a7b3d5f60a1b2c3d4e5f60718' }, 400); },
+    saveExpense: function (t, d) { var o = Object.assign({}, d, { id: d.id || nextId++, amount: parseFloat(d.amount), dateValid: true, addedOn: '2026-11-15 10:00', receiptLink: '' }); return wait(o); },
+    saveTransfer: function (t, d) { return wait(Object.assign({}, d, { id: d.id || nextId++, amount: parseFloat(d.amount), dateValid: true })); },
+    deleteExpense: function (t, id) { expenses = expenses.filter(function (e) { return e.id !== id; }); return wait(true); },
+    deleteTransfer: function (t, id) { transfers = transfers.filter(function (e) { return e.id !== id; }); return wait(true); },
+    generateReport: function () { return wait(null, 800).then(function () { throw new Error('Demo mode: PDF reports are created only in the real app.'); }); },
+    changePassword: function () { return wait(true); }
+  };
+})();
+</script>
+</body>
+</html>
