@@ -141,6 +141,8 @@ main{max-width:1100px;margin:0 auto;padding:22px 16px 110px}
 .warn-box{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text);border-radius:16px;padding:12px 14px;font-size:13.5px;margin-bottom:14px}
 .warn-box b{color:var(--warn)}
 .warn-box ul{margin:6px 0 0;padding-left:18px}
+.warn-box li{margin-bottom:8px}
+.warn-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;border:1px solid var(--border);background:var(--surface);padding:10px 16px;font-weight:700;cursor:pointer;text-decoration:none;color:var(--text);min-height:44px;transition:transform .08s,box-shadow .15s}
 .btn:active{transform:scale(.98)}
@@ -681,7 +683,30 @@ function renderDashboard() {
   $('dashDate').textContent = '📅 ' + now.toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
     ' · Updated ' + upd.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
   var w = state.data.warnings;
-  $('warnings').innerHTML = w.length ? '<div class="warn-box"><b>Please check ' + w.length + ' item' + (w.length > 1 ? 's' : '') + ' in your sheet</b><ul>' + w.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '';
+  $('warnings').innerHTML = w.length ? '<div class="warn-box"><b>Please check ' + w.length + ' item' + (w.length > 1 ? 's' : '') + ' in your sheet</b><ul>' + w.map(function (x, i) {
+    if (typeof x === 'string') x = { text: x };
+    var acts = x.id ? '<div class="warn-acts edit-only"><button class="btn small" data-wfix="' + i + '">✏️ Edit</button>' +
+      (x.canConfirm ? '<button class="btn small" data-wok="' + i + '">✓ It\'s correct, confirm</button>' : '') + '</div>' : '';
+    return '<li>' + esc(x.text) + acts + '</li>';
+  }).join('') + '</ul></div>' : '';
+  $('warnings').querySelectorAll('[data-wfix]').forEach(function (b) {
+    b.onclick = function () {
+      var x = w[+b.getAttribute('data-wfix')];
+      var row = (x.kind === 'transfer' ? state.data.transfers : state.data.expenses).find(function (r) { return r.id === x.id; });
+      if (row) (x.kind === 'transfer' ? transferForm : expenseForm)(row, null);
+    };
+  });
+  $('warnings').querySelectorAll('[data-wok]').forEach(function (b) {
+    b.onclick = function () {
+      var x = w[+b.getAttribute('data-wok')];
+      var row = (x.kind === 'transfer' ? state.data.transfers : state.data.expenses).find(function (r) { return r.id === x.id; });
+      if (!row || !confirm('Confirm that ' + row.date + ' (' + money(row.amount) + ') is the correct date?\n\nThis entry will then be counted in totals and reports.')) return;
+      b.disabled = true; b.textContent = 'Saving…';
+      authed('confirmRow', x.kind, row.id, { date: row.date, amount: row.amount })
+        .then(function () { toast('Confirmed.'); return reload(); })
+        .catch(function (e) { b.disabled = false; b.textContent = '✓ It\'s correct, confirm'; toast(e.message, true); });
+    };
+  });
 
   $('hero').innerHTML = '<div class="hero"><div class="lbl">Total spent on the children' + (range.all ? '' : ' ' + range.label) + '</div><div class="big num">' + money(total) + '</div><div class="pills">' +
     '<span class="pill">📅 This month ' + money(thisMonth) + '</span><span class="pill">🧾 ' + exp.length + ' expenses</span><span class="pill">📎 ' + withReceipt + ' with receipt</span></div></div>';
@@ -1008,6 +1033,7 @@ function expenseForm(existing, upload) {
       var list = state.data.expenses, i = list.findIndex(function (x) { return x.id === saved.id; });
       if (i >= 0) list[i] = saved; else list.push(saved);
       closeModal(); toast(existing ? 'Changes saved.' : 'Expense saved.'); render();
+      if (state.data.warnings.length) reload();
     }).catch(function (err) { btn.disabled = false; btn.textContent = existing ? 'Save changes' : 'Save expense'; toast(err.message, true); });
   };
 }
@@ -1110,6 +1136,7 @@ function transferForm(existing, upload) {
       var list = state.data.transfers, i = list.findIndex(function (x) { return x.id === saved.id; });
       if (i >= 0) list[i] = saved; else list.push(saved);
       closeModal(); toast(existing ? 'Changes saved.' : 'Transfer saved.'); render();
+      if (state.data.warnings.length) reload();
     }).catch(function (err) { btn.disabled = false; btn.textContent = existing ? 'Save changes' : 'Save transfer'; toast(err.message, true); });
   };
 }
@@ -1266,7 +1293,8 @@ var DemoApi = (function () {
     login: function (u, pw) { u = String(u).toLowerCase(); if (pw === 'demo1234' && (u === 'father' || u === 'mother')) { demoRole = u === 'father' ? 'editor' : 'viewer'; demoUser = u; return wait({ token: 'demo', user: u, role: demoRole }); } return wait(null, 300).then(function () { throw new Error('Demo: father or mother / demo1234'); }); },
     logout: function () { return wait(true); },
     getBootstrap: function () { return wait({ user: demoUser, role: demoRole, lists: lists, expenses: expenses, transfers: transfers, today: '2026-11-15', spreadsheetUrl: '#', receiptsFolderUrl: '#', reportsFolderUrl: '#',
-      warnings: ['Expense Log row 15: the date "20226-11-03" looks wrong, so this expense is left out of totals and reports.'] }, 500); },
+      warnings: [{ kind: 'expense', id: 13, canConfirm: false, text: 'Expense Log row 13: the date "20226-11-03" is not a valid date, so this expense is left out of totals and reports.' }] }, 500); },
+    confirmRow: function () { return wait(true); },
     uploadReceipt: function () { return wait({ receiptId: 'new', previewId: '', mimeType: 'image/jpeg', text: 'PHARMACY\n123 Main St, Toronto ON\n2026-11-04 14:22\nNasal spray 19.47\nHST 13% 2.53\nTOTAL 22.00\nINTERAC DEBIT', ocrError: '',
       parsed: { date: '2026-11-04', store: 'PHARMACY', address: '123 Main St, Toronto ON', total: 22, tax: 2.53, payment: 'Debit', category: 'Medical', items: [{ name: 'Nasal spray', price: 19.47 }], reference: '' } }, 1200); },
     discardReceipt: function () { return wait(true); },
