@@ -375,6 +375,10 @@ table.items td:last-child{text-align:right}
             <a class="btn" id="lnkReceipts" target="_blank" rel="noopener">Receipts folder</a>
             <a class="btn" id="lnkReports" target="_blank" rel="noopener">Reports folder</a>
           </div>
+          <div class="edit-only mt">
+            <p class="muted" style="margin:12px 0 8px">Receipt images you put inside the Google Sheet are copied to the receipts folder automatically. The images in the sheet are not changed.</p>
+            <button class="btn" id="sImport">Copy receipt images from the sheet now</button>
+          </div>
         </div>
         <div class="card">
           <h3>Session</h3>
@@ -544,8 +548,29 @@ function reload() {
     setupFilters(); setupReports();
     $('lnkSheet').href = d.spreadsheetUrl; $('lnkReceipts').href = d.receiptsFolderUrl; $('lnkReports').href = d.reportsFolderUrl;
     render();
+    autoImportSheetImages();
   }).catch(function (e) { if (state.token) toast(e.message, true); });
 }
+/** Receipt images placed inside sheet cells are copied to Drive in the background (editor only). */
+var importing = false;
+function autoImportSheetImages() {
+  if (importing || !state.data || state.data.role !== 'editor') return;
+  var pending = state.data.expenses.concat(state.data.transfers).filter(function (r) { return r.receiptInSheet && !r.receiptId; }).length;
+  if (!pending) return;
+  importing = true;
+  authed('importSheetReceipts').then(function (r) {
+    importing = false;
+    if (r && r.copied) { toast(r.copied + ' receipt image(s) from the sheet are now available.'); return reload(); }
+  }).catch(function () { importing = false; });
+}
+// Changes made directly in the Google Sheet show up when you come back to the page.
+var lastLoad = 0;
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible' || !state.token || !state.data) return;
+  if (!$('modal').hidden || Date.now() - lastLoad < 20000) return; // don't interrupt an open form
+  lastLoad = Date.now();
+  reload();
+});
 function render() {
   if (!state.data) return;
   if (state.view === 'dashboard') renderDashboard();
@@ -1132,6 +1157,14 @@ $('sChange').addEventListener('click', function () {
 $('sLock').addEventListener('click', function () { lockApp(); });
 $('lockBtn').addEventListener('click', function () { lockApp(); });
 $('sReload').addEventListener('click', function () { reload().then(function () { toast('Data reloaded.'); }); });
+$('sImport').addEventListener('click', function () {
+  var b = this; b.disabled = true; b.textContent = 'Copying…';
+  authed('importSheetReceipts').then(function (r) {
+    toast(r.copied ? r.copied + ' image(s) copied.' : (r.failed ? r.failed + ' image(s) could not be read.' : 'Nothing new to copy.'), !!r.failed && !r.copied);
+    return reload();
+  }).catch(function (e) { toast(e.message, true); })
+    .then(function () { b.disabled = false; b.textContent = 'Copy receipt images from the sheet now'; });
+});
 $('dashPeriod').addEventListener('change', renderDashboard);
 
 /* ===================================================================
@@ -1181,7 +1214,8 @@ var DemoApi = (function () {
     deleteExpense: function (t, id) { expenses = expenses.filter(function (e) { return e.id !== id; }); return wait(true); },
     deleteTransfer: function (t, id) { transfers = transfers.filter(function (e) { return e.id !== id; }); return wait(true); },
     generateReport: function () { return wait(null, 800).then(function () { throw new Error('Demo mode: PDF reports are created only in the real app.'); }); },
-    changePassword: function () { return wait(true); }
+    changePassword: function () { return wait(true); },
+    importSheetReceipts: function () { return wait({ copied: 0, skipped: 0, failed: 0, details: [] }); }
   };
 })();
 </script>
