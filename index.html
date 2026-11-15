@@ -697,6 +697,16 @@ function render() {
 /* ===================================================================
    Dashboard
    =================================================================== */
+function guessSupportMonth(date) {
+  var d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+  if (!d) return '';
+  var y = +d[1], m = +d[2];
+  if (+d[3] >= 20) { m++; if (m > 12) { m = 1; y++; } }
+  return y + '-' + pad2(m);
+}
+/** The month a child support payment is for: the saved "For month", otherwise paid on the 20th or later = next month. */
+function supportMonthOf(x) { var m = String(x.supportMonth || ''); return /^\d{4}-\d{2}/.test(m) ? m.slice(0, 7) : guessSupportMonth(x.date); }
+function monthLabel(k) { return k ? MONTH_NAMES[+k.slice(5) - 1] + ' ' + k.slice(0, 4) : ''; }
 function isSupportExp(e) { return /child\s*support/i.test(e.category || ''); }
 function nonSupportCats() { return state.data.lists.categories.filter(function (c) { return !/child\s*support/i.test(c); }); }
 // Child support is not a children's expense: it lives in the Support tab.
@@ -884,7 +894,7 @@ function expenseRow(e) {
   return '<button class="row' + (e.dateValid ? '' : ' bad') + '" data-exp="' + e.id + '" style="--k:' + catColor(e.category) + '"><div class="cat-ico">' + catIcon(e.category) + '</div>' +
     '<div class="main"><div class="title">' + esc(e.description || '(no description)') + '</div><div class="meta">' +
     '<span class="chip">📅 ' + esc(e.dateValid ? shortDate(e.date) : e.date) + '</span>' +
-    '<span class="chip cat">' + esc(e.category) + '</span>' +
+    (isSupportExp(e) ? '<span class="chip cat" style="--k:var(--c2)">For ' + esc(monthLabel(supportMonthOf(e))) + '</span>' : '<span class="chip cat">' + esc(e.category) + '</span>') +
     '<span class="chip">' + esc(e.child) + '</span>' + (e.store ? '<span class="chip">' + esc(e.store) + '</span>' : '') +
     (hasReceipt ? '<span class="chip" title="Receipt attached">🧾 Receipt</span>' : '') + (e.dateValid ? '' : '<span class="chip" style="color:var(--warn)">Check date</span>') +
     '</div></div><div class="amount num">' + money(e.amount) + '<small>' + esc(e.paidBy) + '</small></div></button>';
@@ -907,10 +917,12 @@ function renderExpenses() {
    Transfers list
    =================================================================== */
 function transferRow(t) {
+  var forM = isSupport(t) ? supportMonthOf(t) : '';
   var dir = t.from === 'Me' ? 'Sent' : t.to === 'Me' ? 'Received' : '';
   return '<button class="row' + (t.dateValid ? '' : ' bad') + '" data-trf="' + t.id + '" style="--k:' + (dir === 'Received' ? 'var(--c2)' : 'var(--c3)') + '"><div class="cat-ico">' + (dir === 'Received' ? '📥' : '📤') + '</div>' +
     '<div class="main"><div class="title">' + esc((t.purpose || 'Transfer') + (t.reference && !t.purpose ? ' · ' + t.reference : '')) + '</div><div class="meta">' +
     '<span class="chip">📅 ' + esc(t.dateValid ? shortDate(t.date) : t.date) + '</span>' +
+    (forM ? '<span class="chip cat" style="--k:var(--c2)">For ' + esc(monthLabel(forM)) + '</span>' : '') +
     '<span class="chip">' + esc(t.from) + ' → ' + esc(t.to) + '</span>' + (t.reference ? '<span class="chip">' + esc(t.reference) + '</span>' : '') +
     (t.receiptId ? '<span class="chip">🧾 Proof</span>' : '') + '</div></div><div class="amount num" style="color:' + (dir === 'Received' ? 'var(--good)' : 'inherit') + '">' +
     (dir === 'Received' ? '+' : '') + money(t.amount) + '<small>' + dir + '</small></div></button>';
@@ -934,26 +946,31 @@ function renderSupport() {
   setupSupportPeriod();
   var r = periodInfo($('sPeriod').value, 'sFromD', 'sToD');
   var all = state.data.transfers.filter(isSupport).map(function (t) {
-    return { kind: 't', r: t, id: t.id, date: t.date, amount: t.amount, dateValid: t.dateValid, mine: t.from === 'Me', toMe: t.to === 'Me' };
+    return { kind: 't', r: t, id: t.id, date: t.date, forMonth: supportMonthOf(t), amount: t.amount, dateValid: t.dateValid, mine: t.from === 'Me', toMe: t.to === 'Me' };
   }).concat(state.data.expenses.filter(isSupportExp).map(function (e) {
-    return { kind: 'e', r: e, id: e.id, date: e.date, amount: e.amount, dateValid: e.dateValid, mine: e.paidBy === 'Me', toMe: e.paidBy === 'Ex-spouse' };
+    return { kind: 'e', r: e, id: e.id, date: e.date, forMonth: supportMonthOf(e), amount: e.amount, dateValid: e.dateValid, mine: e.paidBy === 'Me', toMe: e.paidBy === 'Ex-spouse' };
   }));
-  var list = all.filter(function (t) { return r.all || (t.dateValid && t.date >= r.from && t.date <= r.to); })
+  var fromKey = r.from.slice(0, 7), toKey = r.to.slice(0, 7);
+  var list = all.filter(function (t) { return r.all || (t.dateValid && t.forMonth >= fromKey && t.forMonth <= toKey); })
     .sort(function (a, b) { return a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1); });
   var paid = list.filter(function (t) { return t.dateValid && t.mine; });
   var received = list.filter(function (t) { return t.dateValid && t.toMe; });
 
   // months covered by the period (all dates: from the first payment to this month), never past this month
   var validAll = all.filter(function (t) { return t.dateValid; });
-  var firstKey = validAll.length ? validAll.map(function (t) { return t.date; }).sort()[0].slice(0, 7) : today().slice(0, 7);
+  var firstKey = validAll.length ? validAll.map(function (t) { return t.forMonth; }).sort()[0] : today().slice(0, 7);
+  var lastCovered = validAll.length ? validAll.map(function (t) { return t.forMonth; }).sort().pop() : '';
   // months before the first recorded payment are not counted as missed
   var startKey = r.all ? firstKey : (r.from.slice(0, 7) > firstKey ? r.from.slice(0, 7) : firstKey);
-  var endKey = r.all ? today().slice(0, 7) : (r.to.slice(0, 7) < today().slice(0, 7) ? r.to.slice(0, 7) : today().slice(0, 7));
+  var endKey = r.all ? today().slice(0, 7) : (toKey < today().slice(0, 7) ? toKey : today().slice(0, 7));
+  // a payment made early for next month still shows that month
+  if (lastCovered > endKey && (r.all || lastCovered <= toKey)) endKey = lastCovered;
   var months = [], cy = +startKey.slice(0, 4), cm = +startKey.slice(5, 7);
   while ((cy + '-' + pad2(cm)) <= endKey && months.length < 60) { months.push(cy + '-' + pad2(cm)); cm++; if (cm > 12) { cm = 1; cy++; } }
   var byMonth = {};
-  paid.forEach(function (t) { var k = t.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + t.amount; });
-  var amounts = paid.map(function (t) { return t.amount; });
+  var paidOn = {};
+  paid.forEach(function (t) { var k = t.forMonth; byMonth[k] = (byMonth[k] || 0) + t.amount; (paidOn[k] = paidOn[k] || []).push(t.date); });
+  var amounts = Object.keys(byMonth).map(function (k) { return byMonth[k]; });
   var usual = amounts.length ? amounts.slice().sort(function (a, b) { return a - b; })[Math.floor(amounts.length / 2)] : 0;
   var monthsPaid = months.filter(function (k) { return byMonth[k] > 0; }).length;
   var last = paid[0];
@@ -970,7 +987,8 @@ function renderSupport() {
   $('supMonths').innerHTML = months.length ? '<table class="months-tbl">' + months.slice().reverse().map(function (k) {
     var v = byMonth[k] || 0;
     var st = !v ? '<span class="st no">Not paid</span>' : (usual && v < usual * 0.9 ? '<span class="st part">Partial</span>' : '<span class="st ok">Paid</span>');
-    return '<tr><td>' + MONTH_NAMES[+k.slice(5) - 1] + ' ' + k.slice(0, 4) + '</td><td class="num">' + (v ? money(v) : '—') + '</td><td>' + st + '</td></tr>';
+    var when = paidOn[k] ? '<div class="muted" style="font-size:12px">paid ' + paidOn[k].map(function (d) { return shortDate(d); }).join(', ') + '</div>' : '';
+    return '<tr><td>' + monthLabel(k) + when + '</td><td class="num">' + (v ? money(v) : '—') + '</td><td>' + st + '</td></tr>';
   }).join('') + '</table>' : '<div class="muted">No months in this period.</div>';
 
   $('supCount').textContent = list.length + ' payment' + (list.length === 1 ? '' : 's') + (r.all ? '' : ' ' + r.label);
@@ -1339,6 +1357,7 @@ function expenseForm(existing, upload) {
     '<div class="field"><label>Amount ($) <span class="req">*</span></label><input type="number" step="0.01" min="0" inputmode="decimal" id="xAmount" value="' + esc(existing ? e.amount : (p.total != null ? p.total : '')) + '"></div>' +
     '<div class="field"><label>Child <span class="req">*</span></label><select id="xChild">' + optionList(L.children, val('child', lastChild), 'Choose…') + '</select></div>' +
     '<div class="field"><label>Category <span class="req">*</span></label><select id="xCategory">' + optionList(L.categories, val('category', p.category), 'Choose…') + '</select></div>' +
+    '<div class="field full" id="xMonthWrap" hidden><label>For month <span class="muted" style="font-weight:500">(which month this child support covers)</span></label><input type="month" id="xMonth" value="' + esc(existing ? supportMonthOf(e) : '') + '"></div>' +
     '<div class="field full"><label>Description <span class="req">*</span></label><input type="text" id="xDesc" value="' + esc(desc) + '" placeholder="e.g. Winter boots for Yousuf"></div>' +
     '<div class="field full"><label>Store / Location</label><input type="text" id="xStore" value="' + esc(existing ? e.store : [p.store, p.address].filter(Boolean).join(', ')) + '"></div>' +
     '<div class="field"><label>Payment method</label><select id="xPay">' + optionList(L.paymentMethods, val('payment', p.payment), '—') + '</select></div>' +
@@ -1360,6 +1379,16 @@ function expenseForm(existing, upload) {
   };
   drawItems(items);
   $('xAddItem').onclick = function () { items.push({ name: '', price: null }); drawItems(items); };
+  var monthTouched = !!(existing && /^\d{4}-\d{2}/.test(e.supportMonth || ''));
+  var syncMonth = function () {
+    var sup = /child\s*support/i.test($('xCategory').value);
+    $('xMonthWrap').hidden = !sup;
+    if (sup && !monthTouched) $('xMonth').value = guessSupportMonth($('xDate').value);
+  };
+  $('xCategory').addEventListener('change', syncMonth);
+  $('xDate').addEventListener('change', syncMonth);
+  $('xMonth').addEventListener('input', function () { monthTouched = true; });
+  syncMonth();
   if ($('rcptImg')) $('rcptImg').onclick = function () { zoomImage(this.src); };
   if (existing && e.receiptId) loadReceiptInto('rcptHolder', e);
   var rc = { id: existing ? e.receiptId : (upload ? upload.receiptId : ''), pid: existing ? e.previewId : (upload ? upload.previewId : '') };
@@ -1380,7 +1409,8 @@ function expenseForm(existing, upload) {
       description: $('xDesc').value.trim(), store: $('xStore').value.trim(), payment: $('xPay').value, paidBy: $('xPaid').value,
       notes: $('xNotes').value.trim(), items: itemsToText(items.filter(function (i) { return i.name.trim(); })),
       receiptId: rc.id || '',
-      previewId: rc.pid || ''
+      previewId: rc.pid || '',
+      supportMonth: /child\s*support/i.test($('xCategory').value) ? $('xMonth').value : ''
     };
     if (!data.date || !data.amount || !data.child || !data.category || !data.description) { toast('Please fill in Date, Amount, Child, Category and Description.', true); return; }
     btn.disabled = true; btn.textContent = 'Saving…';
@@ -1471,12 +1501,22 @@ function transferForm(existing, upload, opts) {
     '<div class="field"><label>From <span class="req">*</span></label><select id="tFrom">' + optionList(L.parties, val('from', 'Me')) + '</select></div>' +
     '<div class="field"><label>To <span class="req">*</span></label><select id="tTo">' + optionList(L.parties, val('to', 'Ex-spouse')) + '</select></div>' +
     '<div class="field"><label>Purpose</label><select id="tPurpose">' + optionList(L.purposes, val('purpose', defPurpose), '—') + '</select></div>' +
+    '<div class="field" id="tMonthWrap" hidden><label>For month <span class="muted" style="font-weight:500">(month covered)</span></label><input type="month" id="tMonth" value="' + esc(existing ? supportMonthOf(t) : '') + '"></div>' +
     '<div class="field"><label>Reference / Confirmation #</label><input type="text" id="tRef" value="' + esc(val('reference', p.reference)) + '"></div>' +
     '<div class="field full"><label>Notes</label><textarea id="tNotes">' + esc(val('notes')) + '</textarea></div>' +
     '</div></div></div></div>' +
     '<div class="sheet-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tSave">' + (existing ? 'Save changes' : 'Save transfer') + '</button></div>');
   if (!existing) queueUI('tSave');
   if (existing && t.receiptId) loadReceiptInto('rcptHolder', t);
+  var tMonthTouched = !!(existing && /^\d{4}-\d{2}/.test(t.supportMonth || ''));
+  var tSync = function () {
+    var sup = /child\s*support/i.test($('tPurpose').value + ' ' + $('tRef').value + ' ' + $('tNotes').value);
+    $('tMonthWrap').hidden = !sup;
+    if (sup && !tMonthTouched) $('tMonth').value = guessSupportMonth($('tDate').value);
+  };
+  ['tPurpose', 'tDate'].forEach(function (id) { $(id).addEventListener('change', tSync); });
+  $('tMonth').addEventListener('input', function () { tMonthTouched = true; });
+  tSync();
   var rc = { id: existing ? t.receiptId : (upload ? upload.receiptId : ''), pid: existing ? t.previewId : (upload ? upload.previewId : '') };
   wireAttach(function (res) {
     rc.id = res.receiptId; rc.pid = res.previewId;
@@ -1490,7 +1530,8 @@ function transferForm(existing, upload, opts) {
       id: existing ? t.id : null, expected: existing ? { date: t.date, amount: t.amount } : null,
       date: $('tDate').value, amount: $('tAmount').value, from: $('tFrom').value, to: $('tTo').value,
       purpose: $('tPurpose').value, reference: $('tRef').value.trim(), notes: $('tNotes').value.trim(),
-      receiptId: rc.id || '', previewId: rc.pid || ''
+      receiptId: rc.id || '', previewId: rc.pid || '',
+      supportMonth: $('tMonthWrap').hidden ? '' : $('tMonth').value
     };
     if (!data.date || !data.amount) { toast('Please fill in Date and Amount.', true); return; }
     if (data.from === data.to) { toast('From and To must be different.', true); return; }
